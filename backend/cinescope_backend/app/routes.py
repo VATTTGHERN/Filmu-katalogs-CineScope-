@@ -256,3 +256,30 @@ def update_movie(movie_id):
         return jsonify({"message": "Информация о фильме обновлена!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@bp.route('/delete-movie/<int:movie_id>', methods=['DELETE'])
+def delete_movie(movie_id):
+    try:
+        # Получаем ID пользователя (например, из заголовка запроса)
+        user_id = request.headers.get('User-ID')
+        user = User.query.get(user_id)
+
+        # Проверяем, является ли пользователь администратором
+        if not user or user.role != "admin":
+            return jsonify({"error": "Доступ запрещён. Только администраторы могут удалять фильмы."}), 403
+
+        # Ищем фильм в базе данных
+        movie = Movie.query.get(movie_id)
+        if not movie:
+            return jsonify({"error": "Фильм с таким ID не найден"}), 404
+
+        # Удаляем сначала все отзывы, связанные с этим фильмом
+        Review.query.filter_by(movie_id=movie.id).delete()
+
+        # Теперь удаляем сам фильм
+        db.session.delete(movie)
+        db.session.commit()
+
+        return jsonify({"message": f"Фильм '{movie.title}' и все его отзывы успешно удалены"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
