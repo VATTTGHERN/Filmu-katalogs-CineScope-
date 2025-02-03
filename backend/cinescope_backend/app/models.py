@@ -5,7 +5,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(10), nullable=False, default="user")  # Новое поле для роли
+    role = db.Column(db.String(10), nullable=False, default="user")  # Поле для роли
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -15,7 +15,10 @@ class Movie(db.Model):
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     release_date = db.Column(db.Date, nullable=True)
-    genres = db.Column(db.Text, nullable=True)  # Новое поле для жанра
+    genres = db.Column(db.Text, nullable=True)  # Поле для жанра
+
+    # Связь многие-ко-многим с актёрами
+    actors = db.relationship('Actor', secondary='movie_actors', backref=db.backref('movies', lazy='dynamic'))
 
     def __repr__(self):
         return f'<Movie {self.title}>'
@@ -29,3 +32,18 @@ class Review(db.Model):
 
     def __repr__(self):
         return f'<Review {self.id} for Movie {self.movie_id}>'
+
+# Таблица для связи "многие ко многим" между актёрами и фильмами
+movie_actors = db.Table('movie_actors',
+    db.Column('movie_id', db.Integer, db.ForeignKey('movie.id'), primary_key=True),
+    db.Column('actor_id', db.Integer, db.ForeignKey('actor.id'), primary_key=True)
+)
+
+class Actor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # Имя актёра
+    bio = db.Column(db.Text, nullable=True)  # Биография
+    birth_date = db.Column(db.Date, nullable=True)  # Дата рождения
+
+    def __repr__(self):
+        return f'<Actor {self.name}>'
