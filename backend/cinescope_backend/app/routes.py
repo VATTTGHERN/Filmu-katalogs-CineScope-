@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request  # Добавлен импорт request для работы с данными из запроса
 from app import db
-from app.models import User, Movie, Review  # Импортируем модель Review для работы с таблицей отзывов
+from app.models import User, Movie, Review, Actor # Импортируем модель Review для работы с таблицей отзывов
 
 bp = Blueprint('routes', __name__)
 
@@ -281,5 +281,109 @@ def delete_movie(movie_id):
         db.session.commit()
 
         return jsonify({"message": f"Фильм '{movie.title}' и все его отзывы успешно удалены"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/add-actor', methods=['POST'])
+def add_actor():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        bio = data.get('bio')
+        birth_date = data.get('birth_date')
+
+        if not name:
+            return jsonify({"error": "Поле 'name' обязательно"}), 400
+
+        birth_date_obj = None
+        if birth_date:
+            try:
+                from datetime import datetime
+                birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
+
+        new_actor = Actor(name=name, bio=bio, birth_date=birth_date_obj)
+        db.session.add(new_actor)
+        db.session.commit()
+
+        return jsonify({"message": "Актёр успешно добавлен", "actor_id": new_actor.id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/add-actor-to-movie', methods=['POST'])
+def add_actor_to_movie():
+    try:
+        data = request.get_json()
+        movie_id = data.get('movie_id')
+        actor_id = data.get('actor_id')
+
+        if not movie_id or not actor_id:
+            return jsonify({"error": "Нужны 'movie_id' и 'actor_id'"}), 400
+
+        movie = Movie.query.get(movie_id)
+        actor = Actor.query.get(actor_id)
+
+        if not movie or not actor:
+            return jsonify({"error": "Фильм или актёр не найдены"}), 404
+
+        movie.actors.append(actor)
+        db.session.commit()
+
+        return jsonify({"message": f"Актёр {actor.name} добавлен в фильм {movie.title}"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/get-actors-by-movie/<int:movie_id>', methods=['GET'])
+def get_actors_by_movie(movie_id):
+    try:
+        movie = Movie.query.get(movie_id)
+        if not movie:
+            return jsonify({"error": "Фильм не найден"}), 404
+
+        actors = movie.actors
+        actor_list = [{"id": actor.id, "name": actor.name, "bio": actor.bio, "birth_date": str(actor.birth_date)} for actor in actors]
+
+        return jsonify({"movie": movie.title, "actors": actor_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/get-movies-by-actor/<int:actor_id>', methods=['GET'])
+def get_movies_by_actor(actor_id):
+    try:
+        actor = Actor.query.get(actor_id)
+        if not actor:
+            return jsonify({"error": "Актёр не найден"}), 404
+
+        movies = actor.movies
+        movie_list = [{"id": movie.id, "title": movie.title, "release_date": str(movie.release_date)} for movie in movies]
+
+        return jsonify({"actor": actor.name, "movies": movie_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/remove-actor-from-movie', methods=['DELETE'])
+def remove_actor_from_movie():
+    try:
+        data = request.get_json()
+        movie_id = data.get('movie_id')
+        actor_id = data.get('actor_id')
+
+        if not movie_id or not actor_id:
+            return jsonify({"error": "Нужно передать 'movie_id' и 'actor_id'"}), 400
+
+        movie = Movie.query.get(movie_id)
+        actor = Actor.query.get(actor_id)
+
+        if not movie or not actor:
+            return jsonify({"error": "Фильм или актёр не найдены"}), 404
+
+        # Удаляем связь между фильмом и актёром
+        if actor in movie.actors:
+            movie.actors.remove(actor)
+            db.session.commit()
+            return jsonify({"message": f"Актёр {actor.name} удалён из фильма {movie.title}"}), 200
+        else:
+            return jsonify({"error": "Актёр не был привязан к этому фильму"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
