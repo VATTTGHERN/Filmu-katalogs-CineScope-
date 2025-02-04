@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request  # Добавлен импорт request для работы с данными из запроса
 from app import db
-from app.models import User, Movie, Review, Actor # Импортируем модель Review для работы с таблицей отзывов
+from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters # Импортируем модель Review для работы с таблицей отзывов
+from datetime import datetime
 
 bp = Blueprint('routes', __name__)
 
@@ -119,13 +120,15 @@ def get_movies():
                 "id": movie.id,
                 "title": movie.title,
                 "description": movie.description,
-                "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None
+                "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
+                "genres": movie.genres if movie.genres else "Unknown"
             }
             for movie in movies
         ]
         return jsonify({"movies": movie_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @bp.route('/search-movies', methods=['GET'])
 def search_movies():
@@ -291,6 +294,7 @@ def add_actor():
         name = data.get('name')
         bio = data.get('bio')
         birth_date = data.get('birth_date')
+        death_date = data.get('death_date')  # Новое поле
 
         if not name:
             return jsonify({"error": "Поле 'name' обязательно"}), 400
@@ -298,12 +302,18 @@ def add_actor():
         birth_date_obj = None
         if birth_date:
             try:
-                from datetime import datetime
                 birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
+                return jsonify({"error": "Дата рождения должна быть в формате YYYY-MM-DD"}), 400
 
-        new_actor = Actor(name=name, bio=bio, birth_date=birth_date_obj)
+        death_date_obj = None
+        if death_date:
+            try:
+                death_date_obj = datetime.strptime(death_date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Дата смерти должна быть в формате YYYY-MM-DD"}), 400
+
+        new_actor = Actor(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
         db.session.add(new_actor)
         db.session.commit()
 
@@ -342,7 +352,16 @@ def get_actors_by_movie(movie_id):
             return jsonify({"error": "Фильм не найден"}), 404
 
         actors = movie.actors
-        actor_list = [{"id": actor.id, "name": actor.name, "bio": actor.bio, "birth_date": str(actor.birth_date)} for actor in actors]
+        actor_list = [
+            {
+                "id": actor.id,
+                "name": actor.name,
+                "bio": actor.bio,
+                "birth_date": str(actor.birth_date) if actor.birth_date else None,
+                "death_date": str(actor.death_date) if actor.death_date else None  # Добавляем дату смерти
+            }
+            for actor in actors
+        ]
 
         return jsonify({"movie": movie.title, "actors": actor_list}), 200
     except Exception as e:
@@ -385,5 +404,143 @@ def remove_actor_from_movie():
             return jsonify({"message": f"Актёр {actor.name} удалён из фильма {movie.title}"}), 200
         else:
             return jsonify({"error": "Актёр не был привязан к этому фильму"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Добавить режиссёра
+@bp.route('/add-director', methods=['POST'])
+def add_director():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        bio = data.get('bio', '')
+        birth_date = data.get('birth_date')
+        death_date = data.get('death_date')
+
+        birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d').date() if birth_date else None
+        death_date_obj = datetime.strptime(death_date, '%Y-%m-%d').date() if death_date else None
+
+        new_director = Director(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
+        db.session.add(new_director)
+        db.session.commit()
+        return jsonify({"message": "Режиссёр успешно добавлен", "director_id": new_director.id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Добавить сценариста
+@bp.route('/add-writer', methods=['POST'])
+def add_writer():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        bio = data.get('bio', '')
+        birth_date = data.get('birth_date')
+        death_date = data.get('death_date')
+
+        birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d').date() if birth_date else None
+        death_date_obj = datetime.strptime(death_date, '%Y-%m-%d').date() if death_date else None
+
+        new_writer = Writer(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
+        db.session.add(new_writer)
+        db.session.commit()
+        return jsonify({"message": "Сценарист успешно добавлен", "writer_id": new_writer.id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Добавить режиссёра к фильму
+@bp.route('/add-director-to-movie', methods=['POST'])
+def add_director_to_movie():
+    data = request.get_json()
+    new_entry = MovieDirectors(movie_id=data['movie_id'], director_id=data['director_id'])
+    db.session.add(new_entry)
+    db.session.commit()
+    return jsonify({"message": "Режиссёр добавлен к фильму"}), 201
+
+# Добавить сценариста к фильму
+@bp.route('/add-writer-to-movie', methods=['POST'])
+def add_writer_to_movie():
+    data = request.get_json()
+    new_entry = MovieWriters(movie_id=data['movie_id'], writer_id=data['writer_id'])
+    db.session.add(new_entry)
+    db.session.commit()
+    return jsonify({"message": "Сценарист добавлен к фильму"}), 201
+
+# Получить режиссёров фильма
+@bp.route('/get-directors-by-movie/<int:movie_id>', methods=['GET'])
+def get_directors_by_movie(movie_id):
+    try:
+        directors = db.session.query(Director).join(MovieDirectors).filter(MovieDirectors.movie_id == movie_id).all()
+        return jsonify({
+            "movie_id": movie_id,
+            "directors": [
+                {
+                    "id": d.id,
+                    "name": d.name,
+                    "bio": d.bio,
+                    "birth_date": d.birth_date.strftime('%Y-%m-%d') if d.birth_date else None,
+                    "death_date": d.death_date.strftime('%Y-%m-%d') if d.death_date else None
+                }
+                for d in directors
+            ]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Получить сценаристов фильма
+@bp.route('/get-writers-by-movie/<int:movie_id>', methods=['GET'])
+def get_writers_by_movie(movie_id):
+    try:
+        writers = db.session.query(Writer).join(MovieWriters).filter(MovieWriters.movie_id == movie_id).all()
+        return jsonify({
+            "movie_id": movie_id,
+            "writers": [
+                {
+                    "id": w.id,
+                    "name": w.name,
+                    "bio": w.bio,
+                    "birth_date": w.birth_date.strftime('%Y-%m-%d') if w.birth_date else None,
+                    "death_date": w.death_date.strftime('%Y-%m-%d') if w.death_date else None
+                }
+                for w in writers
+            ]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Получить фильмы конкретного режиссёра
+@bp.route('/get-movies-by-director/<int:director_id>', methods=['GET'])
+def get_movies_by_director(director_id):
+    movies = db.session.query(Movie).join(MovieDirectors).filter(MovieDirectors.director_id == director_id).all()
+    return jsonify({
+        "director_id": director_id,
+        "movies": [{"id": m.id, "title": m.title} for m in movies]
+    })
+
+# Получить фильмы конкретного сценариста
+@bp.route('/get-movies-by-writer/<int:writer_id>', methods=['GET'])
+def get_movies_by_writer(writer_id):
+    movies = db.session.query(Movie).join(MovieWriters).filter(MovieWriters.writer_id == writer_id).all()
+    return jsonify({
+        "writer_id": writer_id,
+        "movies": [{"id": m.id, "title": m.title} for m in movies]
+    })
+
+@bp.route('/get-actors', methods=['GET'])
+def get_actors():
+    try:
+        actors = Actor.query.all()
+        actor_list = [
+            {
+                "id": actor.id,
+                "name": actor.name,
+                "bio": actor.bio,
+                "birth_date": actor.birth_date.strftime('%Y-%m-%d') if actor.birth_date else None,
+                "death_date": actor.death_date.strftime('%Y-%m-%d') if actor.death_date else None
+            }
+            for actor in actors
+        ]
+        return jsonify({"actors": actor_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
