@@ -44,6 +44,29 @@ class Actor(db.Model):
     name = db.Column(db.String(100), nullable=False)  # Имя актёра
     bio = db.Column(db.Text, nullable=True)  # Биография
     birth_date = db.Column(db.Date, nullable=True)  # Дата рождения
+    death_date = db.Column(db.Date, nullable=True)
 
     def __repr__(self):
         return f'<Actor {self.name}>'
+
+class Director(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    birth_date = db.Column(db.Date, nullable=True)
+    death_date = db.Column(db.Date, nullable=True)
+
+class Writer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    birth_date = db.Column(db.Date, nullable=True)
+    death_date = db.Column(db.Date, nullable=True)
+
+class MovieDirectors(db.Model):
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), primary_key=True)
+    director_id = db.Column(db.Integer, db.ForeignKey('director.id'), primary_key=True)
+
+class MovieWriters(db.Model):
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), primary_key=True)
+    writer_id = db.Column(db.Integer, db.ForeignKey('writer.id'), primary_key=True)
