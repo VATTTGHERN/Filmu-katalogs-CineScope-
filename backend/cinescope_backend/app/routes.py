@@ -2,6 +2,10 @@ from flask import Blueprint, jsonify, request  # Добавлен импорт r
 from app import db
 from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters # Импортируем модель Review для работы с таблицей отзывов
 from datetime import datetime
+from app.auth import *
+
+from app.auth import admin_required, moderator_required
+
 
 bp = Blueprint('routes', __name__)
 
@@ -79,20 +83,18 @@ def get_users():
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/add-movie', methods=['POST'])
+@admin_required  # Только администратор может добавлять фильмы
 def add_movie():
     from datetime import datetime
     try:
-        # Получаем данные из запроса
         data = request.get_json()
         title = data.get('title')
         description = data.get('description')
         release_date = data.get('release_date')  # Ожидается в формате YYYY-MM-DD
 
-        # Проверка обязательных полей
         if not title:
             return jsonify({"error": "Поле 'title' обязательно"}), 400
 
-        # Конвертация даты (если указана)
         release_date_obj = None
         if release_date:
             try:
@@ -100,7 +102,6 @@ def add_movie():
             except ValueError:
                 return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
 
-        # Создаем новый фильм
         new_movie = Movie(title=title, description=description, release_date=release_date_obj)
         db.session.add(new_movie)
         db.session.commit()
@@ -261,29 +262,16 @@ def update_movie(movie_id):
         return jsonify({"error": str(e)}), 500
     
 @bp.route('/delete-movie/<int:movie_id>', methods=['DELETE'])
+@admin_required  # Только администратор может удалять фильмы
 def delete_movie(movie_id):
     try:
-        # Получаем ID пользователя (например, из заголовка запроса)
-        user_id = request.headers.get('User-ID')
-        user = User.query.get(user_id)
-
-        # Проверяем, является ли пользователь администратором
-        if not user or user.role != "admin":
-            return jsonify({"error": "Доступ запрещён. Только администраторы могут удалять фильмы."}), 403
-
-        # Ищем фильм в базе данных
         movie = Movie.query.get(movie_id)
         if not movie:
-            return jsonify({"error": "Фильм с таким ID не найден"}), 404
+            return jsonify({"error": "Фильм не найден"}), 404
 
-        # Удаляем сначала все отзывы, связанные с этим фильмом
-        Review.query.filter_by(movie_id=movie.id).delete()
-
-        # Теперь удаляем сам фильм
         db.session.delete(movie)
         db.session.commit()
-
-        return jsonify({"message": f"Фильм '{movie.title}' и все его отзывы успешно удалены"}), 200
+        return jsonify({"message": f"Фильм '{movie.title}' успешно удалён"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -542,5 +530,19 @@ def get_actors():
             for actor in actors
         ]
         return jsonify({"actors": actor_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/delete-review/<int:review_id>', methods=['DELETE'])
+@moderator_required  # Только модератор или админ могут удалять отзывы
+def delete_review(review_id):
+    try:
+        review = Review.query.get(review_id)
+        if not review:
+            return jsonify({"error": "Отзыв не найден"}), 404
+
+        db.session.delete(review)
+        db.session.commit()
+        return jsonify({"message": "Отзыв успешно удалён"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
