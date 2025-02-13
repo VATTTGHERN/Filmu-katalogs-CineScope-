@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фильм | CineScope</title>
+    <link rel="stylesheet" href="style.css"> <!-- Основной стиль -->
+    <link rel="stylesheet" href="movie-style.css"> <!-- Стиль для страницы фильма -->
+    <script defer src="movie.js"></script>
+</head>
+<body>
+    <header>
+        <h1>CineScope</h1>
+        <a href="index.html">Главная</a>
+    </header>
+
+    <main>
+        <div class="movie-container">
+            <!-- Контейнер для всей страницы -->
+            <div class="movie-header">
+                <h1 id="movie-title"></h1> <!-- Название фильма -->
+            </div>
+
+            <div class="movie-content">
+                <!-- Левая часть страницы (постер) -->
+                <div class="movie-poster">
+                    <img id="movie-poster" src="" alt="Постер фильма">
+                </div>
+
+                <!-- Правая часть страницы (информация о фильме) -->
+                <div class="movie-details">
+                    <ul>
+                        <li><strong>Год выпуска:</strong> <span id="movie-year"></span></li>
+                        <li><strong>Жанр:</strong> <span id="movie-genre"></span></li>
+                        <li><strong>Режиссер:</strong> <span id="movie-director"></span></li>
+                        <li><strong>Длительность:</strong> <span id="movie-duration"></span></li>
+                        <li><strong>Актеры:</strong> <span id="movie-actors"></span></li>
+                        <li><strong>Возраст:</strong> <span id="movie-age"></span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Описание фильма -->
+            <div class="movie-description">
+                <p id="movie-description"></p>
+            </div>
+
+           <!-- Трейлер -->
+        <div class="movie-trailer">
+            <h2>Трейлер</h2>
+        <!-- Здесь мы будем вставлять iframe с реальным трейлером -->
+        <iframe id="movie-trailer" width="100%" height="500" src="https://www.youtube.com/watch?v=w3o3Z7julXo&ab_channel=Kinoman" frameborder="0" allowfullscreen></iframe>
+</div>
+
+
+            <!-- Оценка фильма -->
+<div class="movie-rating">
+    <h2>Оцени фильм</h2>
+    <div id="rating-stars" class="stars">
+        <span class="star" data-value="1">&#9733;</span>
+        <span class="star" data-value="2">&#9733;</span>
+        <span class="star" data-value="3">&#9733;</span>
+        <span class="star" data-value="4">&#9733;</span>
+        <span class="star" data-value="5">&#9733;</span>
+    </div>
+    <p>Средняя оценка: <span id="average-rating">4.5</span></p>
+</div>
+
+<!-- Твой отзыв на фильм -->
+<div id="review-container">
+    <h3>Твой отзыв на фильм</h3>
+    <textarea id="review-text" maxlength="500" placeholder="Напишите ваш отзыв (не более 500 символов)"></textarea>
+    <button id="submit-review">Отправить отзыв</button>
+    <p id="remaining-characters">Осталось 500 символов</p>
+</div>
+
+<!-- Секция отзывов -->
+<div id="reviews">
+    <h3>Отзывы пользователей</h3>
+    <div id="reviews-list"></div>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; Maksims Goldmann, Timofejs Kravčuks P2-4 2025</p>
+        <p>CineScope - лучший каталог фильмов</p>
+    </footer>
+
+</body>
+</html>
