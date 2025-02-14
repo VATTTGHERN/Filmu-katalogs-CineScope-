@@ -2,60 +2,25 @@ import jwt
 from flask import request, jsonify, g
 from datetime import datetime, timedelta
 from functools import wraps
+from flask import Blueprint
+from flask_jwt_extended import (
+    create_access_token, get_jwt_identity,
+    jwt_required, JWTManager
+)
+from app.models import db, User
+from app.config import Config
 
-from flask import current_app as app
-from app import db
-
-from app.models import User
-from app.config import SECRET_KEY  
-
-# ✅ Декоратор для проверки токена и роли пользователя
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({"error": "Токен отсутствует"}), 401
-
-        try:
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            g.current_user = User.query.get(data["id"])
-            if g.current_user is None:
-                return jsonify({"error": "Пользователь не найден"}), 401
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Срок действия токена истек"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Неверный токен"}), 401
-
-        return f(*args, **kwargs)
-    return decorated
-
-# ✅ Декоратор для администраторов
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if g.current_user.role != "admin":
-            return jsonify({"error": "Требуются права администратора"}), 403
-        return f(*args, **kwargs)
-    return token_required(decorated)
-
-# ✅ Декоратор для модераторов
-def moderator_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if g.current_user.role not in ["admin", "moderator"]:
-            return jsonify({"error": "Требуются права модератора"}), 403
-        return f(*args, **kwargs)
-    return token_required(decorated)
+auth_bp = Blueprint("auth", __name__)
 
 # ✅ Регистрация пользователей
-@app.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
+        role = data.get('role', 'user')
 
         if not (username and email and password):
             return jsonify({"error": "Заполните все поля"}), 400
@@ -63,8 +28,8 @@ def register():
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "Этот email уже зарегистрирован"}), 400
 
-        new_user = User(username=username, email=email)
-        new_user.set_password(password)  # Хешируем пароль
+        new_user = User(username=username, email=email, role=role)
+        new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
 
@@ -73,7 +38,7 @@ def register():
         return jsonify({"error": str(e)}), 500
 
 # ✅ Авторизация пользователей
-@app.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
@@ -85,17 +50,46 @@ def login():
         if not user or not user.check_password(password):
             return jsonify({"error": "Неверный email или пароль"}), 401
 
-        token = jwt.encode(
-            {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role,
-                "exp": datetime.utcnow() + timedelta(hours=2)  # Токен живёт 2 часа
-            },
-            SECRET_KEY,
-            algorithm="HS256"
-        )
+        # ✅ Передаем только ID пользователя как строку
+        token = create_access_token(identity=str(user.id))
 
         return jsonify({"token": token}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ✅ Защищенный маршрут
+@auth_bp.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "Пользователь не найден"}), 404
+
+    return jsonify({"id": user.id, "username": user.username, "role": user.role}), 200
+
+# ✅ Декоратор для проверки роли
+def role_required(required_roles):
+    def decorator(f):
+        @wraps(f)
+        @jwt_required()
+        def decorated_function(*args, **kwargs):
+            user_id = get_jwt_identity()
+            user = User.query.get(user_id)
+
+            if not user:
+                return jsonify({"error": "Пользователь не найден"}), 404
+
+            if user.role not in required_roles:
+                return jsonify({"error": "Недостаточно прав"}), 403
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# ✅ Декоратор для администраторов
+admin_required = role_required(["admin"])
+
+# ✅ Декоратор для модераторов
+moderator_required = role_required(["admin", "moderator"])
