@@ -19,7 +19,6 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
@@ -30,9 +29,14 @@ class Movie(db.Model):
     # Связь многие-ко-многим с актёрами
     actors = db.relationship('Actor', secondary='movie_actors', backref=db.backref('movies', lazy='dynamic'))
 
+    # Связь многие-ко-многим с режиссерами
+    directors = db.relationship('Director', secondary='movie_directors', backref=db.backref('movies', lazy='dynamic'))
+
+    # Связь многие-ко-многим со сценаристами
+    writers = db.relationship('Writer', secondary='movie_writers', backref=db.backref('movies', lazy='dynamic'))
+
     def __repr__(self):
         return f'<Movie {self.title}>'
-
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -87,3 +91,14 @@ class MovieDirectors(db.Model):
 class MovieWriters(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), primary_key=True)
     writer_id = db.Column(db.Integer, db.ForeignKey('writer.id'), primary_key=True)
+
+class FavoriteMovie(db.Model):
+    __tablename__ = "favorite_movie"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey("movie.id"), nullable=False)
+
+    # Связь с пользователем и фильмом
+    user = db.relationship("User", backref="favorites")
+    movie = db.relationship("Movie", backref="favorited_by")
