@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request  # Добавлен импорт request для работы с данными из запроса
 from app import db
-from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters # Импортируем модель Review для работы с таблицей отзывов
+from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters, FavoriteMovie
 from datetime import datetime
 from app.auth import *
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.auth import admin_required, moderator_required
 
@@ -82,31 +83,45 @@ def get_users():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/add-movie', methods=['POST'])
-@admin_required  # Только администратор может добавлять фильмы
+@bp.route("/add-movie", methods=["POST"])
+@jwt_required()
+@admin_required
 def add_movie():
-    from datetime import datetime
     try:
         data = request.get_json()
-        title = data.get('title')
-        description = data.get('description')
-        release_date = data.get('release_date')  # Ожидается в формате YYYY-MM-DD
+        title = data.get("title")
+        description = data.get("description", "")
+        release_date = data.get("release_date")
+        genres = data.get("genres", [])  # Ожидаем список жанров
 
-        if not title:
-            return jsonify({"error": "Поле 'title' обязательно"}), 400
+        # Проверяем, если жанры пришли в виде строки, преобразуем их в список
+        if isinstance(genres, str):
+            genres = genres.split(", ")  # Разделяем строку по запятой и пробелу
 
-        release_date_obj = None
-        if release_date:
-            try:
-                release_date_obj = datetime.strptime(release_date, '%Y-%m-%d').date()
-            except ValueError:
-                return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
+        if not title or not release_date:
+            return jsonify({"error": "Название и дата выхода обязательны"}), 400
 
-        new_movie = Movie(title=title, description=description, release_date=release_date_obj)
+        # Проверяем, существует ли фильм с таким названием
+        existing_movie = Movie.query.filter_by(title=title).first()
+        if existing_movie:
+            return jsonify({"error": "Фильм уже существует"}), 400
+
+        # Преобразуем список жанров в строку перед сохранением
+        genres_string = ", ".join(genres) if genres else ""
+
+        # Создаем новый фильм
+        new_movie = Movie(
+            title=title,
+            description=description,
+            release_date=datetime.strptime(release_date, '%Y-%m-%d').date(),
+            genres=genres_string  # 💡 Теперь корректно сохраняем строку жанров
+        )
+
         db.session.add(new_movie)
         db.session.commit()
 
-        return jsonify({"message": "Фильм успешно добавлен", "movie_id": new_movie.id}), 201
+        return jsonify({"message": "Фильм добавлен", "movie_id": new_movie.id}), 201
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -115,6 +130,7 @@ def get_movies():
     try:
         # Получаем все фильмы из базы данных
         movies = Movie.query.all()
+
         # Преобразуем объекты фильмов в список словарей
         movie_list = [
             {
@@ -122,14 +138,13 @@ def get_movies():
                 "title": movie.title,
                 "description": movie.description,
                 "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
-                "genres": movie.genres if movie.genres else "Unknown"
+                "genres": movie.genres.split(", ") if movie.genres else []  # Преобразуем строку в список
             }
             for movie in movies
         ]
         return jsonify({"movies": movie_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @bp.route('/search-movies', methods=['GET'])
 def search_movies():
@@ -224,27 +239,27 @@ def get_reviews(movie_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/update-movie/<int:movie_id>', methods=['PUT'])
+@bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
+@jwt_required()
+@admin_required
 def update_movie(movie_id):
     try:
-        # Проверка роли пользователя (в реальной системе здесь будет токен или другой механизм авторизации)
-        user_id = request.headers.get('User-ID')  # Получаем ID пользователя из заголовка
-        user = User.query.get(user_id)
-        if not user or user.role != "admin":
-            return jsonify({"error": "Доступ запрещён. Только администраторы могут обновлять фильмы."}), 403
-
         # Получаем данные из запроса
         data = request.get_json()
-        title = data.get('title')
-        description = data.get('description')
-        release_date = data.get('release_date')
+        title = data.get("title")
+        description = data.get("description")
+        release_date = data.get("release_date")
+        genres = data.get("genres", [])
+        directors = data.get("directors", [])
+        writers = data.get("writers", [])
+        actors = data.get("actors", [])
 
-        # Ищем фильм в базе данных
+        # Проверяем, существует ли фильм
         movie = Movie.query.get(movie_id)
         if not movie:
             return jsonify({"error": "Фильм с таким ID не найден"}), 404
 
-        # Обновляем данные фильма
+        # Обновляем основные поля фильма
         if title:
             movie.title = title
         if description:
@@ -252,12 +267,47 @@ def update_movie(movie_id):
         if release_date:
             try:
                 from datetime import datetime
-                movie.release_date = datetime.strptime(release_date, '%Y-%m-%d').date()
+                movie.release_date = datetime.strptime(release_date, "%Y-%m-%d").date()
             except ValueError:
                 return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
 
+        # Обновляем жанры
+        if isinstance(genres, str):
+            genres = genres.split(", ")
+        movie.genres = ", ".join(genres) if genres else ""
+
+        # Обновляем режиссеров
+        movie.directors.clear()
+        for director_name in directors:
+            director = Director.query.filter_by(name=director_name).first()
+            if not director:
+                director = Director(name=director_name)
+                db.session.add(director)
+            movie.directors.append(director)
+
+        # Обновляем сценаристов
+        movie.writers.clear()
+        for writer_name in writers:
+            writer = Writer.query.filter_by(name=writer_name).first()
+            if not writer:
+                writer = Writer(name=writer_name)
+                db.session.add(writer)
+            movie.writers.append(writer)
+
+        # Обновляем актеров
+        movie.actors.clear()
+        for actor_name in actors:
+            actor = Actor.query.filter_by(name=actor_name).first()
+            if not actor:
+                actor = Actor(name=actor_name)
+                db.session.add(actor)
+            movie.actors.append(actor)
+
+        # Сохраняем изменения
         db.session.commit()
+
         return jsonify({"message": "Информация о фильме обновлена!"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
@@ -546,3 +596,41 @@ def delete_review(review_id):
         return jsonify({"message": "Отзыв успешно удалён"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@bp.route("/add-to-favorites", methods=["POST"])
+@jwt_required()
+def add_to_favorites():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    movie_id = data.get("movie_id")
+
+    movie = Movie.query.get(movie_id)
+    if not movie:
+        return jsonify({"error": "Фильм не найден"}), 404
+
+    existing_favorite = FavoriteMovie.query.filter_by(user_id=user_id, movie_id=movie_id).first()
+    if existing_favorite:
+        return jsonify({"message": "Фильм уже в избранном"}), 400
+
+    new_favorite = FavoriteMovie(user_id=user_id, movie_id=movie_id)
+    db.session.add(new_favorite)
+    db.session.commit()
+
+    return jsonify({"message": "Фильм добавлен в избранное"}), 201
+
+@bp.route('/favorites', methods=['GET'])
+@jwt_required()
+def get_favorites():
+    """Получаем список избранных фильмов текущего пользователя"""
+    user_id = get_jwt_identity()
+    favorites = (
+        db.session.query(Movie)
+        .join(FavoriteMovie, Movie.id == FavoriteMovie.movie_id)
+        .filter(FavoriteMovie.user_id == user_id)
+        .all()
+    )
+
+    return jsonify({"favorites": [
+    {"id": movie.id, "title": movie.title, "year": movie.release_date.year if movie.release_date else None}
+    for movie in favorites
+]}), 200
