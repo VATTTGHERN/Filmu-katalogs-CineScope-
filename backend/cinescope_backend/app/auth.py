@@ -14,26 +14,23 @@ auth_bp = Blueprint("auth", __name__)
 
 # ✅ Регистрация пользователей
 @auth_bp.route('/register', methods=['POST'])
-def register():
+def register_user():
     try:
         data = request.get_json()
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role', 'user')
-
-        if not (username and email and password):
-            return jsonify({"error": "Заполните все поля"}), 400
 
         if User.query.filter_by(email=email).first():
-            return jsonify({"error": "Этот email уже зарегистрирован"}), 400
+            return jsonify({"error": "Šis e-pasts jau ir reģistrēts!"}), 400
 
-        new_user = User(username=username, email=email, role=role)
+        new_user = User(username=username, email=email, role="user")  # <=== Указываем роль "user"
         new_user.set_password(password)
+        
         db.session.add(new_user)
         db.session.commit()
 
-        return jsonify({"message": "Регистрация прошла успешно!"}), 201
+        return jsonify({"message": "Lietotājs veiksmīgi reģistrēts!"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -48,14 +45,22 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if not user or not user.check_password(password):
-            return jsonify({"error": "Неверный email или пароль"}), 401
+            return jsonify({"error": "Nepareizs e-pasts vai parole!"}), 401
 
-        # ✅ Передаем только ID пользователя как строку
-        token = create_access_token(identity=str(user.id))
+        # ✅ Генерируем токен
+        access_token = create_access_token(identity=user.id)
 
-        return jsonify({"token": token}), 200
+        return jsonify({
+            "message": "Veiksmīgi pieslēdzies!",
+            "user": {
+                "username": user.username,
+                "email": user.email
+            },
+            "access_token": access_token  # ✅ Теперь токен будет в ответе
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ✅ Защищенный маршрут
 @auth_bp.route('/protected', methods=['GET'])
