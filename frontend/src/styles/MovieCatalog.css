@@ -1,0 +1,106 @@
+.catalog-container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.catalog-title {
+    color: #007bff;
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+/* Контейнер для поиска и фильтрации */
+.search-filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Стили для input и select */
+.search-filter-container input,
+.search-filter-container select {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    outline: none;
+    width: 220px;
+}
+
+/* Выравниваем кнопки */
+.search-btn, .reset-btn {
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border-radius: 6px;
+}
+
+.reset-btn {
+    background-color: #dc3545;
+    border-radius: 6px;
+}
+
+/* Сетка фильмов */
+.movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    justify-content: center;
+}
+
+/* Карточки фильмов */
+.movie-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease-in-out;
+}
+
+.movie-card:hover {
+    transform: scale(1.05);
+}
+
+.movie-info {
+    padding: 10px;
+    text-align: left;
+}
+
+.movie-title {
+    font-size: 1.4rem;
+    margin-bottom: 5px;
+}
+
+.movie-description {
+    font-size: 0.9rem;
+    color: #555;
+    height: 100px;
+    overflow-y: auto;
+    padding-right: 5px;
+    max-width: 100%;
+    text-align: justify;
+    scrollbar-width: thin;
+}
+
+.movie-details {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.movie-image {
+    width: 100%;
+    height: 250px;
+    object-fit: contain;
+    border-radius: 15px;
+}

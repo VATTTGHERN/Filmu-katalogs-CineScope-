@@ -1,0 +1,153 @@
+.movie-details-container {
+    width: 80%;
+    max-width: 900px;
+    margin: 20px auto;
+    text-align: center;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.movie-title {
+    color: #007bff;
+    font-size: 2rem;
+}
+
+.movie-details-image {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.movie-description {
+    font-size: 1.1rem;
+    color: #333;
+    text-align: justify;
+    margin-bottom: 20px;
+}
+
+h3 {
+    margin-top: 20px;
+    font-size: 1.4rem;
+    color: #343a40;
+    font-weight: bold;
+}
+
+.actors-list, .reviews-list {
+    list-style: none;
+    padding: 0;
+    background: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.actors-list li, .reviews-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.reviews-list li:last-child {
+    border-bottom: none;
+}
+
+.reviews-list li p {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Footer */
+.footer {
+    margin-top: 30px;
+    padding: 10px;
+    background: #343a40;
+    color: white;
+    text-align: center;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.top-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.auth-button {
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.login-button {
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+}
+
+.login-button:hover {
+    background-color: #0056b3;
+}
+
+.register-button {
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+}
+
+.register-button:hover {
+    background-color: #0056b3;
+}
+
+.logout-button {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.logout-button:hover {
+    background-color: #c82333;
+}
+
+.review-form {
+    margin-top: 20px;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+}
+
+.review-form label {
+    display: block;
+    margin: 5px 0;
+    font-weight: bold;
+}
+
+.review-form select, .review-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.review-form button {
+    padding: 8px 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.review-form button:hover {
+    background-color: #218838;
+}
+
