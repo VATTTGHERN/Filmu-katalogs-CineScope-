@@ -3,21 +3,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    username = db.Column(db.String(100), nullable=False, unique=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)  # Теперь храним хеш пароля
-    role = db.Column(db.String(10), nullable=False, default="user")  # Поле для роли (user, moderator, admin)
+    password_hash = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default="user")  # <=== Дефолтное значение 'user'
 
     def set_password(self, password):
-        """Хеширует пароль перед сохранением"""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Проверяет пароль при авторизации"""
         return check_password_hash(self.password_hash, password)
-
-    def __repr__(self):
-        return f'<User {self.username}>'
 
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -25,6 +20,8 @@ class Movie(db.Model):
     description = db.Column(db.Text, nullable=True)
     release_date = db.Column(db.Date, nullable=True)
     genres = db.Column(db.Text, nullable=True)  # Поле для жанра
+    trailer_url = db.Column(db.String(255), nullable=True)
+    poster_url = db.Column(db.String(500), nullable=True)
 
     # Связь многие-ко-многим с актёрами
     actors = db.relationship('Actor', secondary='movie_actors', backref=db.backref('movies', lazy='dynamic'))
@@ -40,15 +37,16 @@ class Movie(db.Model):
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)  # Ссылка на фильм
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Ссылка на пользователя
-    text = db.Column(db.Text, nullable=False)  # Текст отзыва
-    rating = db.Column(db.Integer, nullable=False)  # Рейтинг (1-5)
-    created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())  # Дата создания
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Добавляем связь с пользователем
+    text = db.Column(db.Text, nullable=True)  # ✅ Теперь поле может быть пустым
+    rating = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+
+    user = db.relationship("User", backref="reviews")  # Создаём отношение с пользователем
 
     def __repr__(self):
-        return f'<Review {self.id} for Movie {self.movie_id}>'
-
+        return f'<Review {self.id} for Movie {self.movie_id} by User {self.user_id}>'
 
 # Таблица для связи "многие ко многим" между актёрами и фильмами
 movie_actors = db.Table('movie_actors',
@@ -66,14 +64,12 @@ class Actor(db.Model):
     def __repr__(self):
         return f'<Actor {self.name}>'
 
-
 class Director(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     birth_date = db.Column(db.Date, nullable=True)
     death_date = db.Column(db.Date, nullable=True)
-
 
 class Writer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,11 +78,9 @@ class Writer(db.Model):
     birth_date = db.Column(db.Date, nullable=True)
     death_date = db.Column(db.Date, nullable=True)
 
-
 class MovieDirectors(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), primary_key=True)
     director_id = db.Column(db.Integer, db.ForeignKey('director.id'), primary_key=True)
-
 
 class MovieWriters(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), primary_key=True)
