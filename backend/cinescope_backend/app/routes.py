@@ -5,9 +5,9 @@ from datetime import datetime
 from app.auth import *
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.sql import text
+import json
 
 from app.auth import admin_required, moderator_required
-
 
 bp = Blueprint('routes', __name__)
 
@@ -199,43 +199,50 @@ def search_movies():
 @jwt_required()
 def add_review():
     try:
-        user_id = get_jwt_identity()  # Получаем ID текущего пользователя
-        data = request.get_json()
-        movie_id = data.get('movie_id')
-        text = data.get('text', "").strip()
-        if not text:
-                text = None  # Устанавливаем None, если текст пустой
+        user_id = get_jwt_identity()
+        print(f"DEBUG: Полученный user_id = {user_id}")  # 🔴 Логируем ID пользователя
 
-        rating = int(data.get('rating'))  # Принудительно делаем числом
+        if not user_id:
+            print("DEBUG: ❌ Ошибка - user_id не найден!")
+            return jsonify({"error": "Lietotājs nav atrasts!"}), 401
+
+        data = request.get_json()
+        print("DEBUG: Полученные данные:", data)  # 🔴 Логируем входящие данные
+
+        if data is None:
+            return jsonify({"error": "Nevar parsēt JSON!"}), 400
+
+        movie_id = int(data.get('movie_id', 0))
+        rating = int(data.get('rating', 0))
+        text = data.get("text", "").strip()
+        text = text if text else None
+
+        print(f"DEBUG: movie_id={movie_id}, rating={rating}, text={text}")
 
         if not movie_id or rating is None:
-            return jsonify({"error": "Необходимо указать ID фильма и рейтинг"}), 400
+            return jsonify({"error": "Nepieciešams norādīt filmas ID un vērtējumu"}), 400
 
         if not (1 <= rating <= 5):
-            return jsonify({"error": "Рейтинг должен быть от 1 до 5"}), 400
+            return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5"}), 400
 
         movie = Movie.query.get(movie_id)
         if not movie:
-            return jsonify({"error": "Фильм не найден"}), 404
+            print(f"DEBUG: ❌ Фильм с ID {movie_id} не найден!")
+            return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # Проверяем, оставлял ли пользователь уже отзыв на этот фильм
         existing_review = Review.query.filter_by(user_id=user_id, movie_id=movie_id).first()
         if existing_review:
-            return jsonify({"error": "Вы уже оставили отзыв на этот фильм"}), 400
+            return jsonify({"error": "Jūs jau esat atstājuši atsauksmi par šo filmu"}), 400
 
-        # Создаём новый отзыв
-        new_review = Review(
-            movie_id=movie_id,
-            user_id=user_id,
-            text=text if text else None,  # Можно оставить пустым
-            rating=rating
-        )
+        new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=rating)
         db.session.add(new_review)
         db.session.commit()
 
-        return jsonify({"message": "Отзыв успешно добавлен", "review_id": new_review.id}), 201
+        print("DEBUG: ✅ Отзыв успешно добавлен!")
+        return jsonify({"message": "Atsauksme veiksmīgi pievienota!", "review_id": new_review.id}), 201
 
     except Exception as e:
+        print("DEBUG: ❌ Ошибка на сервере:", str(e))
         return jsonify({"error": str(e)}), 500
 
 @bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
@@ -668,19 +675,26 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         # Пересчитываем средний рейтинг
         average_rating = sum([r.rating for r in reviews]) / len(reviews) if reviews else 0
 
+        # ✅ Добавлены новые поля
         return jsonify({
             "id": movie.id,
             "title": movie.title,
             "description": movie.description,
             "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
             "genres": movie.genres.split(", ") if movie.genres else [],
-            "poster_url": movie.poster_url,  # ✅ Добавляем ссылку на постер
-            "trailer_url": movie.trailer_url,  # ✅ Уже было, оставляем
+            "poster_url": movie.poster_url,  # ✅ Уже было
+            "trailer_url": movie.trailer_url,  # ✅ Уже было
             "average_rating": round(average_rating, 1),
             "reviews": review_list,
             "actors": actors,
             "directors": director_list,
             "writers": writer_list,
+
+            # 🆕 Новые поля:
+            "box_office": movie.box_office,  # 💰 Кассовые сборы
+            "awards": json.loads(movie.awards) if movie.awards else [],  # 🏆 Список наград (JSON)
+            "duration": movie.duration,  # ⏳ Длительность
+            "age_rating": movie.age_rating,  # 🔞 Возрастное ограничение
         }), 200
 
     except Exception as e:
