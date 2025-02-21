@@ -60,6 +60,16 @@ const MovieDetails = () => {
             return;
         }
     
+        // Формируем данные отзыва
+        const reviewData = {
+            movie_id: id,
+            rating,
+            text: reviewText.trim() || null  // Если пустая строка, отправляем null
+        };
+    
+        // 🔍 Вывод в консоль (F12 → Console) перед отправкой
+        console.log("Отправляем данные:", JSON.stringify(reviewData, null, 2));
+    
         try {
             const response = await fetch("http://127.0.0.1:5000/add-review", {
                 method: "POST",
@@ -67,18 +77,14 @@ const MovieDetails = () => {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${localStorage.getItem("token")}`
                 },
-                body: JSON.stringify({
-                    movie_id: id,
-                    rating,
-                    text: reviewText
-                })
+                body: JSON.stringify(reviewData)
             });
     
             const data = await response.json();
     
             if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
     
-            // Добавляем новый отзыв в список без перезагрузки
+            // Добавляем новый отзыв в список без перезагрузки страницы
             setReviews([...reviews, { user: "Jūs", rating, text: reviewText }]);
             setRating(0); // Сбрасываем оценку
             setReviewText(""); // Очищаем поле ввода
@@ -115,6 +121,23 @@ const MovieDetails = () => {
             <p><strong>Izdošanas datums:</strong> {movie.release_date || "Nav zināms"}</p>
             <p><strong>Žanri:</strong> {Array.isArray(movie.genres) ? movie.genres.join(", ") : "Nav norādīts"}</p>
             <p><strong>Vidējais vērtējums:</strong> {movie.average_rating || "Nav vērtējumu"}</p>
+            <p><strong>Kases ieņēmumi:</strong> {movie.box_office || "Nav datu"}</p>
+<p><strong>Filmas ilgums:</strong> {movie.duration ? `${movie.duration} minūtes` : "Nav norādīts"}</p>
+<p><strong>Vecuma ierobežojums:</strong> {movie.age_rating || "Nav norādīts"}</p>
+
+<div className="movie-awards">
+    <strong>Galvenās balvas:</strong>
+    {movie.awards && movie.awards.length > 0 ? (
+        <ul>
+            {movie.awards.map((award, index) => (
+                <li key={index}>{award}</li>
+            ))}
+        </ul>
+    ) : (
+        <p>Nav pieejams</p>
+    )}
+</div>
+
 
             <h3>Režisors:</h3>
             <p>{movie.directors?.map(d => d.name).join(", ") || "Nav norādīts"}</p>
