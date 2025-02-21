@@ -1,5 +1,6 @@
 from app import db  # Убедимся, что импорт из app корректный
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,6 +24,12 @@ class Movie(db.Model):
     trailer_url = db.Column(db.String(255), nullable=True)
     poster_url = db.Column(db.String(500), nullable=True)
 
+    # Новые поля
+    box_office = db.Column(db.String(100), nullable=True)  # Кассовые сборы
+    awards = db.Column(db.Text, nullable=True)  # Список наград (JSON-строка)
+    duration = db.Column(db.Integer, nullable=True)  # Длительность (минуты)
+    age_rating = db.Column(db.String(10), nullable=True)  # Возрастное ограничение
+
     # Связь многие-ко-многим с актёрами
     actors = db.relationship('Actor', secondary='movie_actors', backref=db.backref('movies', lazy='dynamic'))
 
@@ -31,6 +38,25 @@ class Movie(db.Model):
 
     # Связь многие-ко-многим со сценаристами
     writers = db.relationship('Writer', secondary='movie_writers', backref=db.backref('movies', lazy='dynamic'))
+
+    def to_dict(self):
+        """Конвертирует объект в словарь для JSON-ответа"""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "release_date": self.release_date.strftime("%Y-%m-%d") if self.release_date else None,
+            "genres": self.genres.split(", ") if self.genres else [],
+            "trailer_url": self.trailer_url,
+            "poster_url": self.poster_url,
+            "box_office": self.box_office,
+            "awards": json.loads(self.awards) if self.awards else [],
+            "duration": self.duration,
+            "age_rating": self.age_rating,
+            "actors": [actor.to_dict() for actor in self.actors],
+            "directors": [director.to_dict() for director in self.directors],
+            "writers": [writer.to_dict() for writer in self.writers],
+        }
 
     def __repr__(self):
         return f'<Movie {self.title}>'
