@@ -151,3 +151,51 @@ h3 {
     background-color: #218838;
 }
 
+.movie-awards {
+    background: #f9f9f9;
+    padding: 10px;
+    margin: 15px 0;
+    border-radius: 5px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.movie-awards ul {
+    padding-left: 20px;
+}
+
+.movie-awards li {
+    list-style-type: disc;
+    margin-bottom: 5px;
+}
+
+.movie-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.movie-info-item {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 5px 0;
+    display: flex;
+}
+
+.movie-info-item strong {
+    min-width: 150px;
+    color: #000;
+}
+
+.movie-awards ul {
+    padding-left: 20px;
+}
+
+.movie-awards li {
+    list-style-type: disc;
+    margin-bottom: 5px;
+}
