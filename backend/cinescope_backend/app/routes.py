@@ -148,17 +148,30 @@ def get_movies():
 @bp.route('/get-latvian-movies', methods=['GET'])
 def get_latvian_movies():
     try:
-        # Фильтруем только фильмы, у которых country = 'Latvia'
-        movies = Movie.query.filter_by(country="Latvia").all()
-        
+        title = request.args.get('title')
+        genre = request.args.get('genre')
+        sort_by = request.args.get('sort_by', 'title')
+        order = request.args.get('order', 'asc')
+
+        query = Movie.query.filter_by(country="Latvia")
+
+        if title:
+            query = query.filter(Movie.title.ilike(f"%{title}%"))
+
+        if genre:
+            query = query.filter(Movie.genres.ilike(f"%{genre}%"))
+
+        if sort_by in ["title", "release_date"]:
+            query = query.order_by(getattr(Movie, sort_by).asc() if order == "asc" else getattr(Movie, sort_by).desc())
+
+        movies = query.all()
         movie_list = [{
             "id": movie.id,
             "title": movie.title,
             "description": movie.description,
             "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
             "genres": movie.genres.split(", ") if movie.genres else [],
-            "poster_url": movie.poster_url,
-            "trailer_url": movie.trailer_url
+            "poster_url": movie.poster_url
         } for movie in movies]
 
         return jsonify({"movies": movie_list}), 200
