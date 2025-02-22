@@ -150,8 +150,6 @@ def get_latvian_movies():
     try:
         title = request.args.get('title')
         genre = request.args.get('genre')
-        sort_by = request.args.get('sort_by', 'title')
-        order = request.args.get('order', 'asc')
 
         query = Movie.query.filter_by(country="Latvia")
 
@@ -160,9 +158,6 @@ def get_latvian_movies():
 
         if genre:
             query = query.filter(Movie.genres.ilike(f"%{genre}%"))
-
-        if sort_by in ["title", "release_date"]:
-            query = query.order_by(getattr(Movie, sort_by).asc() if order == "asc" else getattr(Movie, sort_by).desc())
 
         movies = query.all()
         movie_list = [{
