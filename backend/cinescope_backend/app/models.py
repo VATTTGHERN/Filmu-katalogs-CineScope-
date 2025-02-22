@@ -23,6 +23,7 @@ class Movie(db.Model):
     genres = db.Column(db.Text, nullable=True)  # Поле для жанра
     trailer_url = db.Column(db.String(255), nullable=True)
     poster_url = db.Column(db.String(500), nullable=True)
+    country = db.Column(db.String(50), nullable=True)  # Страна производства фильма
 
     # Новые поля
     box_office = db.Column(db.String(100), nullable=True)  # Кассовые сборы
