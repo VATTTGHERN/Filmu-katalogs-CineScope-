@@ -104,3 +104,22 @@
     object-fit: contain;
     border-radius: 15px;
 }
+
+.latvian-movies-btn {
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    background-color: #96172E; /* Глубокий бордовый */
+    color: white;
+    border-radius: 6px;
+    margin-right: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.latvian-movies-btn:hover {
+    background-color: #7D1428; /* Темнее при наведении */
+    transform: scale(1.05); /* Легкий эффект увеличения */
+}
