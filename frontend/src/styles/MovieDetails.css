@@ -199,3 +199,31 @@ h3 {
     list-style-type: disc;
     margin-bottom: 5px;
 }
+
+.actors-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+.actors-list {
+    list-style: none;
+    padding: 0;
+    background: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 1200px;
+    margin: 10px auto;
+}
+
+.actor-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.actor-item:last-child {
+    border-bottom: none;
+}
