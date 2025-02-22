@@ -19,13 +19,16 @@ const LatvianMovies = () => {
 
     const fetchLatvianMovies = (query = "") => {
         let url = `http://127.0.0.1:5000/get-latvian-movies?${query}`;
-        console.log("API Request URL:", url);  // 👈 Добавляем это
-    
+        console.log("API Request URL:", url);  // 👈 Выведет запрос в консоль
+        
         fetch(url)
             .then((response) => response.json())
-            .then((data) => setMovies(data.movies || []))
+            .then((data) => {
+                console.log("Полученные данные:", data);  // 👈 Логируем ответ сервера
+                setMovies(data.movies || []);
+            })
             .catch((error) => console.error("Kļūda latviešu filmu ielādē:", error));
-    };
+    };    
     
     const [sortBy, setSortBy] = useState("");
 
@@ -35,8 +38,8 @@ const LatvianMovies = () => {
         if (genre) queryParams.push(`genre=${genre}`);
         if (sortBy) queryParams.push(`sort_by=${sortBy}`);
     
-        let query = queryParams.join("&");  // Правильно соединяем параметры
-    
+        let query = queryParams.join("&");  // Объединяем параметры через `&`
+        
         fetchLatvianMovies(query);
     };    
 
