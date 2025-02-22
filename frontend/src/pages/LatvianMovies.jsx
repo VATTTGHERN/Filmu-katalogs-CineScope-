@@ -19,16 +19,16 @@ const LatvianMovies = () => {
 
     const fetchLatvianMovies = (query = "") => {
         let url = `http://127.0.0.1:5000/get-latvian-movies?${query}`;
-        console.log("API Request URL:", url);  // 👈 Выведет запрос в консоль
+        console.log("API Request URL:", url);  // 👈 Лог запроса
         
         fetch(url)
             .then((response) => response.json())
             .then((data) => {
-                console.log("Полученные данные:", data);  // 👈 Логируем ответ сервера
+                console.log("Полученные данные:", data);  // 👈 Лог ответа
                 setMovies(data.movies || []);
             })
             .catch((error) => console.error("Kļūda latviešu filmu ielādē:", error));
-    };    
+    };
     
     const [sortBy, setSortBy] = useState("");
 
@@ -36,7 +36,6 @@ const LatvianMovies = () => {
         let queryParams = [];
         if (searchTerm) queryParams.push(`title=${searchTerm}`);
         if (genre) queryParams.push(`genre=${genre}`);
-        if (sortBy) queryParams.push(`sort_by=${sortBy}`);
     
         let query = queryParams.join("&");  // Объединяем параметры через `&`
         
@@ -84,10 +83,7 @@ const LatvianMovies = () => {
             <option key={index} value={g}>{g}</option>
         ))}
     </select>
-    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-    <option value="title">Nosaukums</option>
-    <option value="release_date">Izdošanas datums</option>
-</select>
+    
     <button className="latvian-search-btn" onClick={handleSearch}>Meklēt</button>
     <button className="latvian-reset-btn" onClick={resetFilters}>Atiestatīt</button>
 </div>
