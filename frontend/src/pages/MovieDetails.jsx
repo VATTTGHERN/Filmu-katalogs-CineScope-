@@ -122,8 +122,9 @@ const MovieDetails = () => {
             <p><strong>Žanri:</strong> {Array.isArray(movie.genres) ? movie.genres.join(", ") : "Nav norādīts"}</p>
             <p><strong>Vidējais vērtējums:</strong> {movie.average_rating || "Nav vērtējumu"}</p>
             <p><strong>Kases ieņēmumi:</strong> {movie.box_office || "Nav datu"}</p>
-<p><strong>Filmas ilgums:</strong> {movie.duration ? `${movie.duration} minūtes` : "Nav norādīts"}</p>
-<p><strong>Vecuma ierobežojums:</strong> {movie.age_rating || "Nav norādīts"}</p>
+            <p><strong>Valsts:</strong> {movie.country}</p>
+            <p><strong>Filmas ilgums:</strong> {movie.duration ? `${movie.duration} minūtes` : "Nav norādīts"}</p>
+            <p><strong>Vecuma ierobežojums:</strong> {movie.age_rating || "Nav norādīts"}</p>
 
 <div className="movie-awards">
     <strong>Galvenās balvas:</strong>
@@ -145,12 +146,17 @@ const MovieDetails = () => {
             <h3>Scenāristi:</h3>
             <p>{movie.writers?.map(w => w.name).join(", ") || "Nav norādīts"}</p>
 
-            <h3>Galvenie aktieri:</h3>
-            <ul className="actors-list">
-                {movie.actors?.map(actor => (
-                    <li key={actor.id}>{actor.name}</li>
-                )) || "Nav datu"}
-            </ul>
+            {movie.actors && movie.actors.length > 0 && (
+  <>
+    <h3 className="actors-title">Galvenie aktieri:</h3>
+    <ul className="actors-list">
+      {movie.actors.map((actor) => (
+        <li key={actor.id} className="actor-item">{actor.name}</li>
+      ))}
+    </ul>
+  </>
+)}
+
 
             <h3>Lietotāju atsauksmes:</h3>
             <ul className="reviews-list">
