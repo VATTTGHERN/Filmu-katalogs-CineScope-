@@ -144,6 +144,60 @@ def get_movies():
         return jsonify({"movies": movie_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@bp.route('/get-latvian-movies', methods=['GET'])
+def get_latvian_movies():
+    try:
+        # Фильтруем только фильмы, у которых country = 'Latvia'
+        movies = Movie.query.filter_by(country="Latvia").all()
+        
+        movie_list = [{
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
+            "genres": movie.genres.split(", ") if movie.genres else [],
+            "poster_url": movie.poster_url,
+            "trailer_url": movie.trailer_url
+        } for movie in movies]
+
+        return jsonify({"movies": movie_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+def search_latvian_movies():
+    try:
+        title = request.args.get('title')
+        genre = request.args.get('genre')
+        sort_by = request.args.get('sort_by', 'title')
+        order = request.args.get('order', 'asc')
+
+        query = Movie.query.filter_by(country="Latvia")
+
+        if title:
+            query = query.filter(Movie.title.ilike(f"%{title}%"))
+
+        if genre:
+            query = query.filter(Movie.genres.ilike(f"%{genre}%"))
+
+        if sort_by in ["title", "release_date"]:
+            query = query.order_by(getattr(Movie, sort_by).asc() if order == "asc" else getattr(Movie, sort_by).desc())
+
+        movies = query.all()
+        movie_list = [{
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
+            "genres": movie.genres.split(", ") if movie.genres else [],
+            "poster_url": movie.poster_url
+        } for movie in movies]
+
+        return jsonify({"movies": movie_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @bp.route('/search-movies', methods=['GET'])
 def search_movies():
@@ -689,8 +743,7 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
             "actors": actors,
             "directors": director_list,
             "writers": writer_list,
-
-            # 🆕 Новые поля:
+            "country": movie.country, 
             "box_office": movie.box_office,  # 💰 Кассовые сборы
             "awards": json.loads(movie.awards) if movie.awards else [],  # 🏆 Список наград (JSON)
             "duration": movie.duration,  # ⏳ Длительность
