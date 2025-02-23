@@ -6,6 +6,7 @@ import LatvianMovies from "./pages/LatvianMovies";
 import Login from "./pages/Login";  // <-- добавляем `pages/`
 import Register from "./pages/Register";  // <-- добавляем `pages/`
 import "./styles/global.css"; // Подключаем общий CSS
+import AddMovie from "./pages/AddMovie";
 
 
 const App = () => {
@@ -18,6 +19,7 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="*" element={<MovieCatalog />} /> {/* Перенаправление на /catalog по умолчанию */}
+                <Route path="/add-movie" element={<AddMovie />} />
             </Routes>
         </Router>
     );
