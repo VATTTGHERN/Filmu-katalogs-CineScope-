@@ -8,13 +8,18 @@ const MovieCatalog = () => {
     const [genre, setGenre] = useState("");
     const [genres, setGenres] = useState([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userRole, setUserRole] = useState(null);
     const navigate = useNavigate();
     
     useEffect(() => {
         fetchMovies();
         fetchGenres();
+
         const token = localStorage.getItem("token");
         setIsLoggedIn(!!token);
+
+        const role = localStorage.getItem("role");
+        setUserRole(role);
     }, []);
     
     const fetchMovies = (query = "") => {
@@ -62,6 +67,16 @@ const MovieCatalog = () => {
 </button>
 
                 <h2 className="catalog-title">Filmu katalogs</h2>
+                {/* 🔥 Кнопка "Добавить фильм" видна только администратору */}
+{localStorage.getItem("role") === "admin" && (
+    <button 
+        onClick={() => navigate("/add-movie")} 
+        className="admin-button"
+    >
+        Pievienot filmu
+    </button>
+)}
+
                 <div className="auth-buttons">
                     {!isLoggedIn ? (
                         <>
@@ -71,6 +86,7 @@ const MovieCatalog = () => {
                     ) : (
                         <button className="logout-button" onClick={() => {
                             localStorage.removeItem("token");
+                            localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
                             setIsLoggedIn(false);
                             navigate("/catalog");
                         }}>Izrakstīties</button>
