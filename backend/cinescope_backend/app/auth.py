@@ -51,13 +51,14 @@ def login():
         access_token = create_access_token(identity=user.id)
 
         return jsonify({
-            "message": "Veiksmīgi pieslēdzies!",
-            "user": {
-                "username": user.username,
-                "email": user.email
-            },
-            "access_token": access_token  # ✅ Теперь токен будет в ответе
-        }), 200
+    "message": "Veiksmīgi pieslēdzies!",
+    "access_token": access_token,
+    "user": {
+        "username": user.username,
+        "email": user.email,
+        "role": user.role  # ✅ Теперь сервер отправляет роль!
+    }
+}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
