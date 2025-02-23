@@ -11,25 +11,30 @@ const Login = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
-
+    
         try {
             const response = await fetch("http://127.0.0.1:5000/auth/login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",  // ✅ Добавляем, чтобы передавались cookie
                 body: JSON.stringify({ email, password })
             });
-
+    
             const data = await response.json();
-
+    
             if (!response.ok) {
                 setError(data.error || "Nezināma kļūda");
                 return;
             }
-
+    
+            // ✅ Сохраняем роль в localStorage
             localStorage.setItem("token", data.access_token);
             localStorage.setItem("username", data.user.username);
             localStorage.setItem("email", data.user.email);
-
+            localStorage.setItem("role", data.user.role); // 🔥 Добавляем роль
+    
             alert("Veiksmīga pieslēgšanās!");
             navigate("/catalog");
         } catch (err) {
