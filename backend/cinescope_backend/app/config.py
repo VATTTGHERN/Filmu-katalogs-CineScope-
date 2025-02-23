@@ -9,3 +9,6 @@ class Config:
     JWT_SECRET_KEY = "super_secret_jwt_key"  # Можешь заменить на свой
     JWT_TOKEN_LOCATION = ["headers"]  # Токен передается в заголовке запроса
     JWT_ACCESS_TOKEN_EXPIRES = 3600  # Время жизни токена (1 час)
+
+    # ✅ Добавляем CORS Headers
+    CORS_HEADERS = "Content-Type"
