@@ -227,3 +227,19 @@ h3 {
 .actor-item:last-child {
     border-bottom: none;
 }
+
+.edit-movie-btn {
+    background-color: #ffc107;
+    color: black;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out;
+    margin-left: 10px;
+}
+
+.edit-movie-btn:hover {
+    background-color: #e0a800;
+}
