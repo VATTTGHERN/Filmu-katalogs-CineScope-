@@ -95,22 +95,26 @@ const MovieDetails = () => {
 
     return (
         <div className="movie-details-container">
-            {/* Навигационные кнопки справа */}
+            {/* Верхняя навигация */}
             <div className="top-navigation">
-                <button className="back-button" onClick={() => navigate("/catalog")}>Atgriezties katalogā</button>
+                <button className="back-button" onClick={() => navigate("/catalog")}>
+                    Atgriezties katalogā
+                </button>
+
                 <div className="auth-buttons">
-                    {!isLoggedIn ? (
-                        <>
-                            <button className="auth-button login-button" onClick={() => navigate("/login")}>Ienākt</button>
-                            <button className="auth-button register-button" onClick={() => navigate("/register")}>Reģistrēties</button>
-                        </>
-                    ) : (
-                        <button className="logout-button" onClick={() => {
-                            localStorage.removeItem("token");
-                            setIsLoggedIn(false);
-                            navigate("/catalog");
-                        }}>Izrakstīties</button>
-                    )}
+                {localStorage.getItem("role") === "admin" && movie && movie.id && (
+    <button className="edit-movie-btn" onClick={() => navigate(`/edit-movie/${movie.id}`)}>
+        Rediģēt filmu
+    </button>
+)}
+                    
+                    <button className="logout-button" onClick={() => {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("role");
+                        navigate("/catalog");
+                    }}>
+                        Izrakstīties
+                    </button>
                 </div>
             </div>
 
