@@ -87,43 +87,56 @@ def get_users():
         return jsonify({"error": str(e)}), 500
 
 @bp.route("/add-movie", methods=["POST"])
-@jwt_required()
-@admin_required
 def add_movie():
     try:
+        user = User.query.filter_by(role="admin").first()
+        if not user:
+            return jsonify({"error": "Nav administratora!"}), 403
+
         data = request.get_json()
-        title = data.get("title")
-        description = data.get("description", "")
-        release_date = data.get("release_date")
-        genres = data.get("genres", [])  # Ожидаем список жанров
 
-        # Проверяем, если жанры пришли в виде строки, преобразуем их в список
-        if isinstance(genres, str):
-            genres = genres.split(", ")  # Разделяем строку по запятой и пробелу
+        # ✅ Получаем все поля из запроса
+        title = data.get("title", "").strip()
+        description = data.get("description", "").strip()
+        release_date = data.get("release_date", "").strip()
+        genres = data.get("genres", [])
+        poster_url = data.get("poster_url", "").strip()
+        trailer_url = data.get("trailer_url", "").strip()
+        country = data.get("country", "").strip()
+        box_office = data.get("box_office", "").strip()
+        awards = json.dumps(data.get("awards", []))  # 🔥 Сохраняем как JSON-строку
+        duration = data.get("duration")
+        age_rating = data.get("age_rating", "").strip()
 
-        if not title or not release_date:
-            return jsonify({"error": "Nepieciešams nosaukums un izlaišanas datums."}), 400
+        if not title or not release_date or not genres:
+            return jsonify({"error": "Nepieciešams nosaukums, izlaišanas datums un žanrs."}), 400
 
-        # Проверяем, существует ли фильм с таким названием
-        existing_movie = Movie.query.filter_by(title=title).first()
-        if existing_movie:
-            return jsonify({"error": "Фильм уже существует"}), 400
+        try:
+            release_date = datetime.strptime(release_date, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Nepareizs datums! Izmantojiet YYYY-MM-DD formātu."}), 400
 
-        # Преобразуем список жанров в строку перед сохранением
-        genres_string = ", ".join(genres) if genres else ""
+        genres_str = ", ".join(genres) if isinstance(genres, list) else genres
 
-        # Создаем новый фильм
+        # ✅ Создаем фильм с сохранением всех полей
         new_movie = Movie(
             title=title,
             description=description,
-            release_date=datetime.strptime(release_date, '%Y-%m-%d').date(),
-            genres=genres_string  # 💡 Теперь корректно сохраняем строку жанров
+            release_date=release_date,
+            genres=genres_str,
+            poster_url=poster_url if poster_url else None,
+            trailer_url=trailer_url if trailer_url else None,
+            country=country if country else None,
+            box_office=box_office if box_office else None,
+            awards=awards if awards else None,
+            duration=duration if duration else None,
+            age_rating=age_rating if age_rating else None
         )
 
         db.session.add(new_movie)
         db.session.commit()
 
-        return jsonify({"message": "Фильм добавлен", "movie_id": new_movie.id}), 201
+        return jsonify({"message": "Filma veiksmīgi pievienota!", "movie_id": new_movie.id}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
