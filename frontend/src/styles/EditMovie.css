@@ -1,0 +1,70 @@
+.edit-movie-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+}
+
+.edit-movie-container h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.edit-movie-container form {
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-movie-container input,
+.edit-movie-container textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: all 0.3s ease-in-out;
+}
+
+.edit-movie-container input:focus,
+.edit-movie-container textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+}
+
+.edit-movie-container button {
+    background-color: #007bff;
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: 0.3s;
+}
+
+.edit-movie-container button:hover {
+    background-color: #0056b3;
+}
+
+.edit-movie-container textarea {
+    height: 80px;
+    resize: none;
+}
+
+.edit-movie-container .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.edit-movie-container label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
