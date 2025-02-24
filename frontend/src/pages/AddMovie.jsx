@@ -1,53 +1,106 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import "../styles/LatvianMovies.css";
 
-const AddMovie = () => {
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [releaseDate, setReleaseDate] = useState("");
-    const [genres, setGenres] = useState("");
+const LatvianMovies = () => {
+    const [movies, setMovies] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [genre, setGenre] = useState("");
+    const [genres, setGenres] = useState([]);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    useEffect(() => {
+        fetchLatvianMovies();
+        fetchGenres();
+        const token = localStorage.getItem("token");
+        setIsLoggedIn(!!token);
+    }, []);
 
-        try {
-            const response = await fetch("http://127.0.0.1:5000/add-movie", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title,
-                    description,
-                    release_date: releaseDate,
-                    genres: genres.split(", ")
-                })
-            });
+    const fetchLatvianMovies = (query = "") => {
+        let url = `http://127.0.0.1:5000/get-latvian-movies?${query}`;
+        console.log("API Request URL:", url);  // 👈 Лог запроса
+        
+        fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+                console.log("Полученные данные:", data);  // 👈 Лог ответа
+                setMovies(data.movies || []);
+            })
+            .catch((error) => console.error("Kļūda latviešu filmu ielādē:", error));
+    };
+    
+    const [sortBy, setSortBy] = useState("");
 
-            const data = await response.json();
+    const handleSearch = () => {
+        let queryParams = [];
+        if (searchTerm) queryParams.push(`title=${searchTerm}`);
+        if (genre) queryParams.push(`genre=${genre}`);
+    
+        let query = queryParams.join("&");  // Объединяем параметры через `&`
+        
+        fetchLatvianMovies(query);
+    };    
 
-            if (!response.ok) {
-                throw new Error(data.error || "Neizdevās pievienot filmu!");
-            }
+    const fetchGenres = () => {
+        fetch("http://127.0.0.1:5000/get-latvian-movies")
+            .then((response) => response.json())
+            .then((data) => {
+                const allGenres = new Set();
+                data.movies.forEach(movie => {
+                    if (movie.genres && movie.genres.length > 0) {  
+                        movie.genres.forEach(genre => allGenres.add(genre));
+                    }
+                });
+                setGenres([...allGenres]);
+            })
+            .catch((error) => console.error("Kļūda žanru ielādē:", error));
+    };      
 
-            alert("Filma veiksmīgi pievienota!");
-            navigate("/catalog");
-        } catch (err) {
-            alert("Kļūda: " + err.message);
-        }
+    const resetFilters = () => {
+        setSearchTerm("");
+        setGenre("");
+        fetchLatvianMovies();
     };
 
     return (
-        <div>
-            <h2>Pievienot filmu</h2>
-            <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Nosaukums" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                <textarea placeholder="Apraksts" value={description} onChange={(e) => setDescription(e.target.value)} required />
-                <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} required />
-                <input type="text" placeholder="Žanri (atdalīt ar komatu)" value={genres} onChange={(e) => setGenres(e.target.value)} required />
-                <button type="submit">Pievienot</button>
-            </form>
+        <div className="latvian-movies-container">
+            <div className="latvian-header">
+                <h2>Latviešu Filmas</h2>
+                <button className="back-to-main" onClick={() => navigate("/catalog")}>Atpakaļ uz katalogu</button>
+            </div>
+
+            <div className="latvian-search-container">
+    <input
+        type="text"
+        placeholder="Meklēt latviešu filmu..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+    />
+    <select value={genre} onChange={(e) => setGenre(e.target.value)}>
+        <option value="">Visi žanri</option>
+        {genres.map((g, index) => (
+            <option key={index} value={g}>{g}</option>
+        ))}
+    </select>
+    
+    <button className="latvian-search-btn" onClick={handleSearch}>Meklēt</button>
+    <button className="latvian-reset-btn" onClick={resetFilters}>Atiestatīt</button>
+</div>
+
+            <div className="latvian-movie-grid">
+                {movies.map((movie) => (
+                    <div key={movie.id} className="latvian-movie-card">
+                        <img src={movie.poster_url} alt={movie.title} className="latvian-movie-image" />
+                        <Link to={`/movie/${movie.id}`} className="latvian-movie-title">{movie.title}</Link>
+                        <p className="latvian-movie-description">{movie.description}</p>
+                        <p className="latvian-movie-details"><strong>Izdošanas datums:</strong> {movie.release_date}</p>
+                        <p className="latvian-movie-details"><strong>Žanri:</strong> {movie.genres.join(", ")}</p>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
 
-export default AddMovie;
+export default LatvianMovies;
