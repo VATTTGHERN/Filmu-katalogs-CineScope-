@@ -321,88 +321,51 @@ def add_review():
         return jsonify({"error": str(e)}), 500
 
 @bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
-@jwt_required()
-@admin_required
 def update_movie(movie_id):
     try:
-        # Получаем данные из запроса
         data = request.get_json()
-        title = data.get("title")
-        description = data.get("description")
-        release_date = data.get("release_date")
-        genres = data.get("genres", [])
-        directors = data.get("directors", [])
-        writers = data.get("writers", [])
-        actors = data.get("actors", [])
-
-        # Проверяем, существует ли фильм
         movie = Movie.query.get(movie_id)
+
         if not movie:
-            return jsonify({"error": "Фильм с таким ID не найден"}), 404
+            return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # Обновляем основные поля фильма
-        if title:
-            movie.title = title
-        if description:
-            movie.description = description
-        if release_date:
-            try:
-                from datetime import datetime
-                movie.release_date = datetime.strptime(release_date, "%Y-%m-%d").date()
-            except ValueError:
-                return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
+        # ✅ Обновляем основные данные фильма
+        movie.title = data.get("title", movie.title)
+        movie.description = data.get("description", movie.description)
+        movie.release_date = datetime.strptime(data["release_date"], "%Y-%m-%d").date() if "release_date" in data else movie.release_date
+        movie.genres = ", ".join(data["genres"]) if "genres" in data else movie.genres
+        movie.poster_url = data.get("poster_url", movie.poster_url)
+        movie.trailer_url = data.get("trailer_url", movie.trailer_url)
+        movie.country = data.get("country", movie.country)
+        movie.box_office = data.get("box_office", movie.box_office)
+        movie.awards = json.dumps(data.get("awards", json.loads(movie.awards) if movie.awards else []))
+        movie.duration = data.get("duration", movie.duration)
+        movie.age_rating = data.get("age_rating", movie.age_rating)
 
-        # Обновляем жанры
-        if isinstance(genres, str):
-            genres = genres.split(", ")
-        movie.genres = ", ".join(genres) if genres else ""
-
-        # Обновляем режиссеров
-        movie.directors.clear()
-        for director_name in directors:
-            director = Director.query.filter_by(name=director_name).first()
-            if not director:
-                director = Director(name=director_name)
-                db.session.add(director)
-            movie.directors.append(director)
-
-        # Обновляем сценаристов
-        movie.writers.clear()
-        for writer_name in writers:
-            writer = Writer.query.filter_by(name=writer_name).first()
-            if not writer:
-                writer = Writer(name=writer_name)
-                db.session.add(writer)
-            movie.writers.append(writer)
-
-        # Обновляем актеров
-        movie.actors.clear()
-        for actor_name in actors:
-            actor = Actor.query.filter_by(name=actor_name).first()
-            if not actor:
-                actor = Actor(name=actor_name)
-                db.session.add(actor)
-            movie.actors.append(actor)
-
-        # Сохраняем изменения
         db.session.commit()
-
-        return jsonify({"message": "Информация о фильме обновлена!"}), 200
+        return jsonify({"message": "Filma veiksmīgi atjaunināta!"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
 @bp.route('/delete-movie/<int:movie_id>', methods=['DELETE'])
-@admin_required  # Только администратор может удалять фильмы
 def delete_movie(movie_id):
     try:
+        # ✅ Проверяем, что это админ
+        user_role = request.headers.get("User-Role")
+        if user_role != "admin":
+            return jsonify({"error": "Tikai administratoriem ir tiesības dzēst filmas!"}), 403
+
+        # ✅ Проверяем, существует ли фильм
         movie = Movie.query.get(movie_id)
         if not movie:
-            return jsonify({"error": "Фильм не найден"}), 404
+            return jsonify({"error": "Filma nav atrasta"}), 404
 
+        # ✅ Удаляем фильм
         db.session.delete(movie)
         db.session.commit()
-        return jsonify({"message": f"Фильм '{movie.title}' успешно удалён"}), 200
+        return jsonify({"message": f"Filma '{movie.title}' veiksmīgi dzēsta!"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
