@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import AddMovie from "./pages/AddMovie";
 import EditMovie from "./pages/EditMovie"; // ✅ Добавляем импорт страницы редактирования
 import "./styles/global.css"; 
+import Profile from "./pages/Profile";
 
 const App = () => {
     return (
@@ -20,6 +21,7 @@ const App = () => {
                 <Route path="/register" element={<Register />} />
                 <Route path="/add-movie" element={<AddMovie />} />
                 <Route path="/edit-movie/:id" element={<EditMovie />} /> {/* ✅ Добавлен маршрут редактирования */}
+                <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<MovieCatalog />} /> {/* Перенаправление на каталог по умолчанию */}
             </Routes>
         </Router>
