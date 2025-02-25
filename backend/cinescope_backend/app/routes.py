@@ -780,3 +780,29 @@ def clean_duplicate_reviews():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@bp.route('/auth/get-profile', methods=['GET'])
+def get_profile():
+    try:
+        token = request.headers.get("Authorization")
+        if not token:
+            return jsonify({"error": "Nav autorizācijas galvenes!"}), 401
+        
+        user_role = request.headers.get("User-Role")  # Получаем роль
+        user_email = request.headers.get("User-Email")  # Получаем email
+
+        if not user_email:
+            return jsonify({"error": "Nav norādīts e-pasts"}), 400
+
+        user = User.query.filter_by(email=user_email).first()
+
+        if not user:
+            return jsonify({"error": "Lietotājs nav atrasts"}), 404
+
+        return jsonify({
+            "username": user.username,
+            "email": user.email,
+            "role": user_role
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
