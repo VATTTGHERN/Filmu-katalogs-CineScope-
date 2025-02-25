@@ -77,21 +77,24 @@ const MovieCatalog = () => {
     </button>
 )}
 
-                <div className="auth-buttons">
-                    {!isLoggedIn ? (
-                        <>
-                            <button className="auth-button login-button" onClick={() => navigate("/login")}>Ienākt</button>
-                            <button className="auth-button register-button" onClick={() => navigate("/register")}>Reģistrēties</button>
-                        </>
-                    ) : (
-                        <button className="logout-button" onClick={() => {
-                            localStorage.removeItem("token");
-                            localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
-                            setIsLoggedIn(false);
-                            navigate("/catalog");
-                        }}>Izrakstīties</button>
-                    )}
-                </div>
+<div className="auth-buttons">
+    {!isLoggedIn ? (
+        <>
+            <button className="auth-button login-button" onClick={() => navigate("/login")}>Ienākt</button>
+            <button className="auth-button register-button" onClick={() => navigate("/register")}>Reģistrēties</button>
+        </>
+    ) : (
+        <>
+            <button className="profile-button" onClick={() => navigate("/profile")}>Profils</button>
+            <button className="logout-button" onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
+                setIsLoggedIn(false);
+                navigate("/catalog");
+            }}>Izrakstīties</button>
+        </>
+    )}
+</div>
             </div>
 
             <div className="search-filter-container">
