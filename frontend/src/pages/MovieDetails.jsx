@@ -93,6 +93,31 @@ const MovieDetails = () => {
         }
     };    
 
+    const handleDelete = async (movieId) => {
+        const confirmDelete = window.confirm("Vai tiešām vēlaties dzēst šo filmu?");
+        if (!confirmDelete) return;
+    
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/delete-movie/${movieId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "User-Role": localStorage.getItem("role"), // ✅ Передаем роль пользователя
+                },
+            });
+    
+            const data = await response.json();
+            if (response.ok) {
+                alert(data.message);
+                navigate("/catalog");
+            } else {
+                alert(`Kļūda: ${data.error}`);
+            }
+        } catch (err) {
+            alert("Neizdevās dzēst filmu!");
+        }
+    };
+
     return (
         <div className="movie-details-container">
             {/* Верхняя навигация */}
@@ -100,23 +125,43 @@ const MovieDetails = () => {
                 <button className="back-button" onClick={() => navigate("/catalog")}>
                     Atgriezties katalogā
                 </button>
+    
+                {/* Если админ, показываем кнопку "Редактировать фильм" */}
+
+{localStorage.getItem("role") === "admin" && movie && (
+    <>
+        <button className="edit-movie-btn" onClick={() => navigate(`/edit-movie/${movie.id}`)}>
+            Rediģēt filmu
+        </button>
+        <button className="delete-movie-btn" onClick={() => handleDelete(movie.id)}>
+            Dzēst filmu
+        </button>
+    </>
+)}
 
                 <div className="auth-buttons">
-                {localStorage.getItem("role") === "admin" && movie && movie.id && (
-    <button className="edit-movie-btn" onClick={() => navigate(`/edit-movie/${movie.id}`)}>
-        Rediģēt filmu
-    </button>
-)}
-                    
-                    <button className="logout-button" onClick={() => {
-                        localStorage.removeItem("token");
-                        localStorage.removeItem("role");
-                        navigate("/catalog");
-                    }}>
-                        Izrakstīties
-                    </button>
+                    {/* Если НЕ вошел в аккаунт */}
+                    {!localStorage.getItem("token") ? (
+                        <>
+                            <button className="auth-button login-button" onClick={() => navigate("/login")}>
+                                Ienākt
+                            </button>
+                            <button className="auth-button register-button" onClick={() => navigate("/register")}>
+                                Reģistrēties
+                            </button>
+                        </>
+                    ) : (
+                        /* Если вошел в аккаунт */
+                        <button className="logout-button" onClick={() => {
+                            localStorage.removeItem("token");
+                            localStorage.removeItem("role");
+                            navigate("/catalog");
+                        }}>
+                            Izrakstīties
+                        </button>
+                    )}
                 </div>
-            </div>
+            </div>    
 
             <h1 className="movie-title">{movie.title}</h1>
             <img src={movie.poster_url || "https://via.placeholder.com/300"} alt={movie.title} className="movie-details-image"/>
@@ -143,7 +188,6 @@ const MovieDetails = () => {
     )}
 </div>
 
-
             <h3>Režisors:</h3>
             <p>{movie.directors?.map(d => d.name).join(", ") || "Nav norādīts"}</p>
 
@@ -160,7 +204,6 @@ const MovieDetails = () => {
     </ul>
   </>
 )}
-
 
             <h3>Lietotāju atsauksmes:</h3>
             <ul className="reviews-list">
