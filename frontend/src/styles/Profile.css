@@ -1,5 +1,5 @@
 .profile-container {
-    max-width: 600px;
+    max-width: 500px;
     margin: 50px auto;
     padding: 20px;
     background: white;
@@ -18,7 +18,7 @@
     color: #555;
 }
 
-.back-button {
+.profile-container .back-button {
     padding: 10px 15px;
     background-color: #007bff;
     color: white;
@@ -28,6 +28,23 @@
     margin-top: 20px;
 }
 
-.back-button:hover {
+.profile-container .back-button:hover {
     background-color: #0056b3;
 }
+
+.profile-container .profile-info {
+    padding: 10px;
+    border-radius: 5px;
+    background: #f8f9fa;
+    margin-top: 10px;
+}
+
+.profile-button {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.profile-button:hover {
+    background-color: #138496;
+}
+
