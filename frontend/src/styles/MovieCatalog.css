@@ -140,3 +140,75 @@
     background-color: #0056b3;
     transform: scale(1.05);
 }
+
+.admin-buttons button,
+.latvian-movies-btn {
+    padding: 12px 18px;
+    font-size: 1rem;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.admin-buttons button:hover,
+.latvian-movies-btn:hover {
+    transform: scale(1.05);
+}
+
+.top-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px;
+    gap: 15px;
+}
+
+.admin-buttons {
+    display: flex;
+    gap: 10px;
+    margin-left: auto; /* Прижимает кнопку к `Profils` и `Izrakstīties` */
+}
+
+.fixed-button {
+    margin-top: -5px; /* Поднимаем кнопки чуть выше */
+}
+
+.admin-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.admin-button {
+    padding: 10px 15px;
+    font-size: 16px;
+}
+
+.admin-button.fixed-button {
+    background-color: #ffc107; /* Принудительно жёлтый цвет */
+    color: black; /* Чёрный текст */
+    font-weight: bold;
+}
+.admin-button.fixed-button:hover {
+    background-color: #e0a800;
+}
+
+
+.profile-button {
+    background-color: #17a2b8; /* Голубой цвет */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.profile-button:hover {
+    background-color: #138496;
+}
