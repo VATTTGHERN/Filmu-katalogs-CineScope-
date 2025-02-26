@@ -30,7 +30,7 @@
 .register-form button {
     padding: 10px;
     font-size: 18px;
-    background-color: #007bff;
+    background-color: #28a745; /* Зелёный цвет */
     color: white;
     border: none;
     border-radius: 5px;
@@ -38,7 +38,7 @@
 }
 
 .register-form button:hover {
-    background-color: #0056b3;
+    background-color: #218838;
 }
 
 .back-button {
