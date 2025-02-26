@@ -61,41 +61,41 @@ const MovieCatalog = () => {
 
     return (
         <div className="catalog-container">
-            <div className="top-navigation">
-            <button className="latvian-movies-btn" onClick={() => navigate("/latvian-movies")}>
-    Latviešu filmas
-</button>
+    {/* 🔥 Новый Header с заголовком */}
+    <h2 className="catalog-title">Filmu katalogs</h2>
 
-                <h2 className="catalog-title">Filmu katalogs</h2>
-                {/* 🔥 Кнопка "Добавить фильм" видна только администратору */}
-{localStorage.getItem("role") === "admin" && (
-    <button 
-        onClick={() => navigate("/add-movie")} 
-        className="admin-button"
-    >
-        Pievienot filmu
-    </button>
+    <div className="top-navigation">
+        <button className="latvian-movies-btn" onClick={() => navigate("/latvian-movies")}>
+            Latviešu filmas
+        </button>
+
+        {/* 🔥 Кнопки для администратора */}
+        {localStorage.getItem("role") === "admin" && (
+    <div className="admin-buttons">
+        <button onClick={() => navigate("/add-movie")} className="admin-button fixed-button">Pievienot filmu</button>
+        <button onClick={() => navigate("/manage-users")} className="admin-button fixed-button">Lietotāji</button>
+    </div>
 )}
 
-<div className="auth-buttons">
-    {!isLoggedIn ? (
-        <>
-            <button className="auth-button login-button" onClick={() => navigate("/login")}>Ienākt</button>
-            <button className="auth-button register-button" onClick={() => navigate("/register")}>Reģistrēties</button>
-        </>
-    ) : (
-        <>
-            <button className="profile-button" onClick={() => navigate("/profile")}>Profils</button>
-            <button className="logout-button" onClick={() => {
-                localStorage.removeItem("token");
-                localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
-                setIsLoggedIn(false);
-                navigate("/catalog");
-            }}>Izrakstīties</button>
-        </>
-    )}
-</div>
-            </div>
+        <div className="auth-buttons">
+            {!isLoggedIn ? (
+                <>
+                    <button className="auth-button login-button" onClick={() => navigate("/login")}>Ienākt</button>
+                    <button className="auth-button register-button" onClick={() => navigate("/register")}>Reģistrēties</button>
+                </>
+            ) : (
+                <>
+                    <button className="profile-button" onClick={() => navigate("/profile")}>Profils</button>
+                    <button className="logout-button" onClick={() => {
+                        localStorage.removeItem("token");
+                        localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
+                        setIsLoggedIn(false);
+                        navigate("/catalog");
+                    }}>Izrakstīties</button>
+                </>
+            )}
+        </div>
+    </div>
 
             <div className="search-filter-container">
                 <input 
