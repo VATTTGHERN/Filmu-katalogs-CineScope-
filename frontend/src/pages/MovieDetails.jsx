@@ -188,6 +188,21 @@ const MovieDetails = () => {
     )}
 </div>
 
+{/* Трейлер */}
+{movie.trailer_url && (
+                <div className="trailer-container">
+                    <h3>Filmas treileris:</h3>
+                    <iframe 
+                        width="560" 
+                        height="315" 
+                        src={movie.trailer_url.replace("watch?v=", "embed/")} 
+                        title="Filmas treileris" 
+                        frameBorder="0" 
+                        allowFullScreen
+                    ></iframe>
+                </div>
+            )}
+
             <h3>Režisors:</h3>
             <p>{movie.directors?.map(d => d.name).join(", ") || "Nav norādīts"}</p>
 
@@ -236,20 +251,7 @@ const MovieDetails = () => {
                 )) : <p>Nav atsauksmju</p>}
             </ul>
 
-            {/* Трейлер */}
-            {movie.trailer_url && (
-                <div className="trailer-container">
-                    <h3>Filmas treileris:</h3>
-                    <iframe 
-                        width="560" 
-                        height="315" 
-                        src={movie.trailer_url.replace("watch?v=", "embed/")} 
-                        title="Filmas treileris" 
-                        frameBorder="0" 
-                        allowFullScreen
-                    ></iframe>
-                </div>
-            )}
+            
 
             {/* Footer */}
             <footer className="footer">
