@@ -62,12 +62,17 @@ const MovieCatalog = () => {
     return (
         <div className="catalog-container">
     {/* 🔥 Новый Header с заголовком */}
-    <h2 className="catalog-title">Filmu katalogs</h2>
+    <h2 className="catalog-title">Filmu katalogs "CineScope"</h2>
 
     <div className="top-navigation">
         <button className="latvian-movies-btn" onClick={() => navigate("/latvian-movies")}>
             Latviešu filmas
         </button>
+        {isLoggedIn && (
+    <button className="favorite-list-button" onClick={() => navigate("/favorites")}>
+        Mans vēlmju saraksts
+    </button>
+)}
 
         {/* 🔥 Кнопки для администратора */}
         {localStorage.getItem("role") === "admin" && (
