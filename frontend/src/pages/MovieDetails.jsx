@@ -11,6 +11,7 @@ const MovieDetails = () => {
     const [rating, setRating] = useState(0); // Хранит оценку (1-5 звезд)
     const [reviewText, setReviewText] = useState(""); // Хранит текст отзыва
     const [reviews, setReviews] = useState([]); // Хранит список отзывов
+    const [isFavorite, setIsFavorite] = useState(false); // 🔥 Статус избранного
 
     useEffect(() => {
         const backendUrl = "http://127.0.0.1:5000/";
@@ -43,6 +44,60 @@ const MovieDetails = () => {
         const token = localStorage.getItem("token");
         setIsLoggedIn(!!token);
     }, [id]);
+
+    const checkIfFavorite = async () => {
+        try {
+            const response = await fetch("http://127.0.0.1:5000/favorites");
+            const data = await response.json();
+            if (data.favorites) {
+                setIsFavorite(data.favorites.some(fav => fav.id === parseInt(id)));
+            }
+        } catch (error) {
+            console.error("Kļūda, pārbaudot favorītus!");
+        }
+    };
+
+    const handleAddToFavorites = async () => {
+        if (!isLoggedIn) {
+            alert("Jums jāpiesakās, lai pievienotu filmu!");
+            return;
+        }
+    
+        const response = await fetch("http://127.0.0.1:5000/add-to-favorites", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ movie_id: id })
+        });
+    
+        const data = await response.json();
+        if (response.ok) {
+            setIsFavorite(true);
+            alert("Filma pievienota vēlmju sarakstam!");
+        } else {
+            alert(data.error || "Kļūda, pievienojot filmu!");
+        }
+    };
+
+    const handleRemoveFromFavorites = async () => {
+        const response = await fetch("http://127.0.0.1:5000/remove-from-favorites", {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ movie_id: id })
+        });
+    
+        const data = await response.json();
+        if (response.ok) {
+            setIsFavorite(false);
+            alert("Filma veiksmīgi izņemta no favorītiem!");
+        } else {
+            alert(data.error || "Kļūda, izņemot filmu!");
+        }
+    };
+    
 
     if (error) {
         return <h2>{error}</h2>;
@@ -138,6 +193,15 @@ const MovieDetails = () => {
         </button>
     </>
 )}
+{isLoggedIn && (
+    <button 
+        className="favorite-button" 
+        onClick={isFavorite ? handleRemoveFromFavorites : handleAddToFavorites}
+    >
+        {isFavorite ? "Noņemt no favorītiem" : "Pievienot vēlmju sarakstam"}
+    </button>
+)}
+
 
                 <div className="auth-buttons">
                     {/* Если НЕ вошел в аккаунт */}
@@ -166,7 +230,7 @@ const MovieDetails = () => {
             <h1 className="movie-title">{movie.title}</h1>
             <img src={movie.poster_url || "https://via.placeholder.com/300"} alt={movie.title} className="movie-details-image"/>
             <p className="movie-description">{movie.description}</p>
-
+            
             <p><strong>Izdošanas datums:</strong> {movie.release_date || "Nav zināms"}</p>
             <p><strong>Žanri:</strong> {Array.isArray(movie.genres) ? movie.genres.join(", ") : "Nav norādīts"}</p>
             <p><strong>Vidējais vērtējums:</strong> {movie.average_rating || "Nav vērtējumu"}</p>
