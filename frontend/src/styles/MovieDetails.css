@@ -262,3 +262,24 @@ h3 {
 .delete-movie-btn:hover {
     background-color: #c82333;
 }
+
+.favorite-button {
+    background-color: #ff9800;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+}
+
+.favorite-button:hover {
+    background-color: #e68900;
+}
+
+.favorite-button:disabled {
+    background-color: #ccc;
+    cursor: default;
+}
