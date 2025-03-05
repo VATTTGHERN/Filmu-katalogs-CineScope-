@@ -642,31 +642,24 @@ def delete_review(review_id):
         return jsonify({"error": str(e)}), 500
     
 @bp.route("/add-to-favorites", methods=["POST"])
-@jwt_required()
 def add_to_favorites():
-    user_id = get_jwt_identity()
     data = request.get_json()
     movie_id = data.get("movie_id")
 
     movie = Movie.query.get(movie_id)
     if not movie:
-        return jsonify({"error": "Фильм не найден"}), 404
+        return jsonify({"error": "Filma nav atrasta"}), 404
 
-    existing_favorite = FavoriteMovie.query.filter_by(user_id=user_id, movie_id=movie_id).first()
-    if existing_favorite:
-        return jsonify({"message": "Фильм уже в избранном"}), 400
-
-    new_favorite = FavoriteMovie(user_id=user_id, movie_id=movie_id)
+    new_favorite = FavoriteMovie(user_id=16, movie_id=movie_id)  # Временно user_id=1 (фиксим потом)
     db.session.add(new_favorite)
     db.session.commit()
 
-    return jsonify({"message": "Фильм добавлен в избранное"}), 201
+    return jsonify({"message": "Filma pievienota vēlmju sarakstam!"}), 201
 
 @bp.route('/favorites', methods=['GET'])
-@jwt_required()
 def get_favorites():
-    """Получаем список избранных фильмов текущего пользователя"""
-    user_id = get_jwt_identity()
+    user_id = 16  # Временно, позже заменим на авторизацию
+
     favorites = (
         db.session.query(Movie)
         .join(FavoriteMovie, Movie.id == FavoriteMovie.movie_id)
@@ -675,9 +668,9 @@ def get_favorites():
     )
 
     return jsonify({"favorites": [
-    {"id": movie.id, "title": movie.title, "year": movie.release_date.year if movie.release_date else None}
-    for movie in favorites
-]}), 200
+        {"id": movie.id, "title": movie.title, "poster_url": movie.poster_url}
+        for movie in favorites
+    ]}), 200
 
 @bp.route('/get-movie/<int:movie_id>', methods=['GET'])
 def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не требовалась авторизация
@@ -711,7 +704,7 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         ]
 
         # Пересчитываем средний рейтинг
-        average_rating = sum([r.rating for r in reviews]) / len(reviews) if reviews else 0
+        average_rating = round(sum([r.rating for r in reviews]) / len(reviews), 1) if reviews else 0.0
 
         # ✅ Добавлены новые поля
         return jsonify({
@@ -738,20 +731,18 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         return jsonify({"error": str(e)}), 500
     
 @bp.route("/remove-from-favorites", methods=["DELETE"])
-@jwt_required()
 def remove_from_favorites():
-    user_id = get_jwt_identity()
     data = request.get_json()
     movie_id = data.get("movie_id")
 
-    favorite = FavoriteMovie.query.filter_by(user_id=user_id, movie_id=movie_id).first()
+    favorite = FavoriteMovie.query.filter_by(user_id=16, movie_id=movie_id).first()
     if not favorite:
-        return jsonify({"message": "Фильм не найден в избранном"}), 400
+        return jsonify({"message": "Filma nav atrasta favorītos"}), 400
 
     db.session.delete(favorite)
     db.session.commit()
 
-    return jsonify({"message": "Фильм удалён из избранного"}), 200
+    return jsonify({"message": "Filma veiksmīgi izņemta no favorītiem"}), 200
 
 @bp.route('/clean-duplicate-reviews', methods=['DELETE']) #Этот кусок кода не настолько важный, но он удаляет дубликаты, если они вдруг во время разработки появились
 @jwt_required()
@@ -804,5 +795,24 @@ def get_profile():
             "email": user.email,
             "role": user_role
         }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/toggle-block-user/<int:user_id>', methods=['PUT'])
+def toggle_block_user(user_id):
+    try:
+        admin_role = request.headers.get("User-Role")
+        if admin_role != "admin":
+            return jsonify({"error": "Tikai administratoriem ir tiesības bloķēt lietotājus!"}), 403
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "Lietotājs nav atrasts"}), 404
+
+        user.is_blocked = not user.is_blocked  # 🔄 Переключаем статус блокировки
+        db.session.commit()
+
+        status = "bloķēts" if user.is_blocked else "atbloķēts"
+        return jsonify({"message": f"Lietotājs {user.username} ir {status}!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
