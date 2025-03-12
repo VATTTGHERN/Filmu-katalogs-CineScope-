@@ -69,8 +69,8 @@ const MovieCatalog = () => {
             Latviešu filmas
         </button>
         {isLoggedIn && (
-    <button className="favorite-list-button" onClick={() => navigate("/favorites")}>
-        Mans vēlmju saraksts
+    <button className="favorite-list-button fixed-button" onClick={() => navigate("/favorites")}>
+        Mans favorītu saraksts
     </button>
 )}
 
