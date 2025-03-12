@@ -47,21 +47,19 @@ def login():
         if not user or not user.check_password(password):
             return jsonify({"error": "Nepareizs e-pasts vai parole!"}), 401
 
-        # ✅ Генерируем токен
-        access_token = create_access_token(identity=user.id)
+        if user.is_blocked:
+            return jsonify({"error": "Jūsu konts ir bloķēts!"}), 403  # ❌ Блокируем вход
 
         return jsonify({
-    "message": "Veiksmīgi pieslēdzies!",
-    "access_token": access_token,
-    "user": {
-        "username": user.username,
-        "email": user.email,
-        "role": user.role  # ✅ Теперь сервер отправляет роль!
-    }
-}), 200
+            "message": "Veiksmīgi pieslēdzies!",
+            "user": {
+                "username": user.username,
+                "email": user.email,
+                "role": user.role
+            }
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # ✅ Защищенный маршрут
 @auth_bp.route('/protected', methods=['GET'])
