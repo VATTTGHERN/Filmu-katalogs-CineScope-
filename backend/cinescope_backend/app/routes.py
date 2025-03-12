@@ -271,54 +271,63 @@ def search_movies():
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/add-review', methods=['POST'])
-@jwt_required()
 def add_review():
-    try:
-        user_id = get_jwt_identity()
-        print(f"DEBUG: Полученный user_id = {user_id}")  # 🔴 Логируем ID пользователя
+    user_email = request.headers.get("User-Email")
 
-        if not user_id:
-            print("DEBUG: ❌ Ошибка - user_id не найден!")
-            return jsonify({"error": "Lietotājs nav atrasts!"}), 401
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
 
-        data = request.get_json()
-        print("DEBUG: Полученные данные:", data)  # 🔴 Логируем входящие данные
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
-        if data is None:
-            return jsonify({"error": "Nevar parsēt JSON!"}), 400
+    user_id = user.id
+    data = request.get_json()
 
-        movie_id = int(data.get('movie_id', 0))
-        rating = int(data.get('rating', 0))
-        text = data.get("text", "").strip()
-        text = text if text else None
+    if not data:
+        return jsonify({"error": "Nevar parsēt JSON!"}), 400
 
-        print(f"DEBUG: movie_id={movie_id}, rating={rating}, text={text}")
+    movie_id = data.get('movie_id')
+    rating = data.get('rating', None)
+    text = data.get("text", "")
 
-        if not movie_id or rating is None:
-            return jsonify({"error": "Nepieciešams norādīt filmas ID un vērtējumu"}), 400
+    # 🔥 Исправляем ошибку с `NoneType`
+    text = text.strip() if text else None
 
-        if not (1 <= rating <= 5):
-            return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5"}), 400
+    if rating is None and text is None:
+        return jsonify({"error": "Jābūt vismaz vērtējumam vai tekstam!"}), 400
 
-        movie = Movie.query.get(movie_id)
-        if not movie:
-            print(f"DEBUG: ❌ Фильм с ID {movie_id} не найден!")
-            return jsonify({"error": "Filma nav atrasta"}), 404
+    if rating is not None and (rating < 1 or rating > 5):
+        return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
 
-        existing_review = Review.query.filter_by(user_id=user_id, movie_id=movie_id).first()
-        if existing_review:
-            return jsonify({"error": "Jūs jau esat atstājuši atsauksmi par šo filmu"}), 400
+    movie = Movie.query.get(movie_id)
+    if not movie:
+        return jsonify({"error": "Filma nav atrasta!"}), 404
 
-        new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=rating)
-        db.session.add(new_review)
-        db.session.commit()
+    existing_review = Review.query.filter_by(movie_id=movie_id, user_id=user_id).first()
+    if existing_review:
+        return jsonify({"error": "Jūs jau esat atstājis atsauksmi par šo filmu!"}), 400
 
-        print("DEBUG: ✅ Отзыв успешно добавлен!")
-        return jsonify({"message": "Atsauksme veiksmīgi pievienota!", "review_id": new_review.id}), 201
+    new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=rating)
+    db.session.add(new_review)
+    db.session.commit()
 
-    except Exception as e:
-        print("DEBUG: ❌ Ошибка на сервере:", str(e))
-        return jsonify({"error": str(e)}), 500
+    reviews = Review.query.filter_by(movie_id=movie_id).all()
+    avg_rating = round(sum(r.rating for r in reviews if r.rating is not None) / len(reviews), 1) if reviews else 0.0
+
+    response = jsonify({
+        "message": "Atsauksme veiksmīgi pievienota!",
+        "review": {
+            "id": new_review.id,
+            "user": user.username,
+            "rating": rating,
+            "text": text
+        },
+        "average_rating": avg_rating
+    })
+    
+    response.headers.add("Access-Control-Allow-Origin", "*")  # Разрешаем CORS
+    return response, 201
 
 @bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
 def update_movie(movie_id):
@@ -509,7 +518,6 @@ def add_director():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # Добавить сценариста
 @bp.route('/add-writer', methods=['POST'])
 def add_writer():
@@ -529,7 +537,6 @@ def add_writer():
         return jsonify({"message": "Сценарист успешно добавлен", "writer_id": new_writer.id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # Добавить режиссёра к фильму
 @bp.route('/add-director-to-movie', methods=['POST'])
@@ -645,30 +652,58 @@ def delete_review(review_id):
 def add_to_favorites():
     data = request.get_json()
     movie_id = data.get("movie_id")
+    user_email = request.headers.get("User-Email")  # ✅ Логируем email
+
+    print(f"DEBUG: User-Email получен -> {user_email}")  # ✅ Добавляем лог
+
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
     movie = Movie.query.get(movie_id)
     if not movie:
-        return jsonify({"error": "Filma nav atrasta"}), 404
+        return jsonify({"error": "Filma nav atrasta!"}), 404
 
-    new_favorite = FavoriteMovie(user_id=16, movie_id=movie_id)  # Временно user_id=1 (фиксим потом)
+    existing_favorite = FavoriteMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
+    if existing_favorite:
+        return jsonify({"error": "Šī filma jau ir pievienota favorītiem!"}), 400
+
+    new_favorite = FavoriteMovie(user_id=user.id, movie_id=movie_id)
     db.session.add(new_favorite)
     db.session.commit()
 
-    return jsonify({"message": "Filma pievienota vēlmju sarakstam!"}), 201
+    return jsonify({"message": "Filma veiksmīgi pievienota vēlmju sarakstam!"}), 201
 
 @bp.route('/favorites', methods=['GET'])
 def get_favorites():
-    user_id = 16  # Временно, позже заменим на авторизацию
+    user_email = request.headers.get("User-Email")
+
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
     favorites = (
         db.session.query(Movie)
         .join(FavoriteMovie, Movie.id == FavoriteMovie.movie_id)
-        .filter(FavoriteMovie.user_id == user_id)
+        .filter(FavoriteMovie.user_id == user.id)
         .all()
     )
 
     return jsonify({"favorites": [
-        {"id": movie.id, "title": movie.title, "poster_url": movie.poster_url}
+        {
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else "Nav zināms",
+            "genres": movie.genres.split(", ") if movie.genres else ["Nav norādīts"],
+            "poster_url": movie.poster_url
+        }
         for movie in favorites
     ]}), 200
 
@@ -734,15 +769,23 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
 def remove_from_favorites():
     data = request.get_json()
     movie_id = data.get("movie_id")
+    user_email = request.headers.get("User-Email")  # ✅ Теперь берем email из запроса
 
-    favorite = FavoriteMovie.query.filter_by(user_id=16, movie_id=movie_id).first()
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
+    favorite = FavoriteMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
     if not favorite:
-        return jsonify({"message": "Filma nav atrasta favorītos"}), 400
+        return jsonify({"error": "Filma nav atrasta favorītos!"}), 400  # Ошибка остается, но теперь для текущего пользователя
 
     db.session.delete(favorite)
     db.session.commit()
 
-    return jsonify({"message": "Filma veiksmīgi izņemta no favorītiem"}), 200
+    return jsonify({"message": "Filma veiksmīgi izņemta no favorītiem!"}), 200
 
 @bp.route('/clean-duplicate-reviews', methods=['DELETE']) #Этот кусок кода не настолько важный, но он удаляет дубликаты, если они вдруг во время разработки появились
 @jwt_required()
