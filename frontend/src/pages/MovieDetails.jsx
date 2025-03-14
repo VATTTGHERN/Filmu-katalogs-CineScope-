@@ -12,6 +12,8 @@ const MovieDetails = () => {
     const [reviewText, setReviewText] = useState(""); // Хранит текст отзыва
     const [reviews, setReviews] = useState([]); // Хранит список отзывов
     const [isFavorite, setIsFavorite] = useState(false); // 🔥 Статус избранного
+    const currentUser = localStorage.getItem("user_email"); // Получаем email текущего пользователя
+
 
     useEffect(() => {
         const backendUrl = "http://127.0.0.1:5000/";
@@ -189,9 +191,18 @@ const MovieDetails = () => {
         }
     };
 
-    const handleEditReview = async (reviewId, newText, newRating) => {
-        const userEmail = localStorage.getItem("email");
+    const handleEditReview = async (reviewId, currentText, currentRating) => {
+        const newText = prompt("Ievadiet jaunu atsauksmi:", currentText);
+        if (newText === null) return;
     
+        const newRating = Number(prompt("Ievadiet jaunu vērtējumu (1-5):", currentRating));
+        if (isNaN(newRating) || newRating < 1 || newRating > 5) {
+            alert("Vērtējumam jābūt no 1 līdz 5!");
+            return;
+        }
+    
+        const userEmail = localStorage.getItem("email");
+        
         const updatedReview = {
             text: newText.trim() || null,
             rating: newRating || null
@@ -218,6 +229,9 @@ const MovieDetails = () => {
     };
     
     const handleDeleteReview = async (reviewId) => {
+        const confirmDelete = window.confirm("Vai tiešām vēlaties dzēst šo atsauksmi?");
+        if (!confirmDelete) return;
+    
         const userEmail = localStorage.getItem("email");
     
         try {
@@ -351,36 +365,59 @@ const MovieDetails = () => {
   </>
 )}
 
-            <h3>Lietotāju atsauksmes:</h3>
-            <ul className="reviews-list">
-                {isLoggedIn && (
-    <div className="review-form">
-        <h3>Pievienot atsauksmi:</h3>
-        <form onSubmit={handleReviewSubmit}>
-            <label>Vērtējums:</label>
-            <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
-                <option value="0">Nav vērtējuma</option>
-                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
-            </select>
+<h3>Lietotāju atsauksmes:</h3>
+<ul className="reviews-list">
+    {isLoggedIn && (
+        <div className="review-form">
+            <h3>Pievienot atsauksmi:</h3>
+            <form onSubmit={handleReviewSubmit}>
+                <label>Vērtējums:</label>
+                <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+                    <option value="0">Nav vērtējuma</option>
+                    {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
+                </select>
 
-            <label>Atsauksmes teksts:</label>
-            <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Ievadiet savu atsauksmi (nav obligāti)"
-            />
+                <label>Atsauksmes teksts:</label>
+                <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Ievadiet savu atsauksmi (nav obligāti)"
+                />
 
-            <button type="submit">Pievienot atsauksmi</button>
-        </form>
+                <button type="submit">Pievienot atsauksmi</button>
+            </form>
+        </div>
+    )}
+
+    {movie.reviews?.length > 0 ? (
+        movie.reviews.map((review) => (
+            <li key={review.id}>
+                <strong>{review.user}</strong> (Vērtējums: {review.rating}/5) <br />
+                <small>
+                    Izveidots: {new Date(review.created_at).toLocaleString("lv-LV", { 
+                        year: 'numeric', month: '2-digit', day: '2-digit', 
+                        hour: '2-digit', minute: '2-digit' 
+                    })}
+                </small>
+                <p>{review.text}</p>
+
+                {/* Кнопки "Редактировать" и "Удалить" отображаются только у автора отзыва */}
+                {isLoggedIn && localStorage.getItem("email") === review.user && (
+    <div className="review-actions">
+        <button className="edit-btn" onClick={() => handleEditReview(review.id, review.text, review.rating)}>
+            Rediģēt
+        </button>
+        <button className="delete-btn" onClick={() => handleDeleteReview(review.id)}>
+            Dzēst
+        </button>
     </div>
 )}
-                {movie.reviews?.length > 0 ? movie.reviews.map((review) => (
-                    <li key={review.id}>
-                        <strong>{review.user}</strong> (Vērtējums: {review.rating}/5)
-                        <p>{review.text}</p>
-                    </li>
-                )) : <p>Nav atsauksmju</p>}
-            </ul>
+            </li>
+        ))
+    ) : (
+        <p>Nav atsauksmju</p>
+    )}
+</ul>
 
             {/* Footer */}
             <footer className="footer">
