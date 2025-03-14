@@ -635,18 +635,27 @@ def get_actors():
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/delete-review/<int:review_id>', methods=['DELETE'])
-@moderator_required  # Только модератор или админ могут удалять отзывы
 def delete_review(review_id):
-    try:
-        review = Review.query.get(review_id)
-        if not review:
-            return jsonify({"error": "Отзыв не найден"}), 404
+    user_email = request.headers.get("User-Email")
 
-        db.session.delete(review)
-        db.session.commit()
-        return jsonify({"message": "Отзыв успешно удалён"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
+    review = Review.query.get(review_id)
+    if not review:
+        return jsonify({"error": "Atsauksme nav atrasta!"}), 404
+
+    if review.user_id != user.id:
+        return jsonify({"error": "Jūs nevarat dzēst šo atsauksmi!"}), 403
+
+    db.session.delete(review)
+    db.session.commit()
+
+    return jsonify({"message": "Atsauksme veiksmīgi dzēsta!"}), 200
     
 @bp.route("/add-to-favorites", methods=["POST"])
 def add_to_favorites():
@@ -730,10 +739,10 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         review_list = [
             {
                 "id": review.id,
-                "user": review.user.username,
+                "user": review.user.email, # ✅ Теперь передается email автора
                 "text": review.text,
                 "rating": review.rating,
-                "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')  # ✅ Форматируем дату
             }
             for review in reviews
         ]
@@ -859,3 +868,39 @@ def toggle_block_user(user_id):
         return jsonify({"message": f"Lietotājs {user.username} ir {status}!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/edit-review/<int:review_id>', methods=['PUT'])
+def edit_review(review_id):
+    user_email = request.headers.get("User-Email")
+    
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+    
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
+    review = Review.query.get(review_id)
+    if not review:
+        return jsonify({"error": "Atsauksme nav atrasta!"}), 404
+
+    if review.user_id != user.id:
+        return jsonify({"error": "Jūs nevarat rediģēt šo atsauksmi!"}), 403
+
+    data = request.get_json()
+    new_text = data.get("text", "").strip()
+    new_rating = data.get("rating")
+
+    if new_rating is not None and (new_rating < 1 or new_rating > 5):
+        return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
+
+    review.text = new_text if new_text else None
+    review.rating = new_rating
+    db.session.commit()
+
+    return jsonify({"message": "Atsauksme veiksmīgi rediģēta!", "review": {
+        "id": review.id,
+        "text": review.text,
+        "rating": review.rating,
+        "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    }}), 200
