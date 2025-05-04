@@ -320,3 +320,186 @@ h3 {
     background-color: #c82333;
     transform: scale(1.05);
 }
+
+.complaint-button {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.complaint-button:hover {
+    background-color: #cc0000;
+}
+
+.complaint-form {
+    background-color: #f8f9fa;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 5px;
+}
+
+.complaint-form h3 {
+    margin-bottom: 10px;
+}
+
+.complaint-form label {
+    font-weight: bold;
+    display: block;
+    margin-top: 5px;
+}
+
+.complaint-form input,
+.complaint-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.complaint-form button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.complaint-form button:hover {
+    background-color: #218838;
+}
+
+.review-section-title {
+    margin-bottom: 10px;
+}
+
+.review-messages {
+    margin-bottom: 15px;
+}
+
+.success-message {
+    color: green;
+    background-color: #e6ffee;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.success-message, .error-message {
+    margin-top: 10px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .success-message {
+    background-color: #e6ffe6;
+    color: #2e7d32;
+    border: 1px solid #2e7d32;
+  }
+  
+  .error-message {
+    background-color: #ffe6e6;
+    color: #c62828;
+    border: 1px solid #c62828;
+  }
+  
+  .delete-confirm-box {
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.delete-confirm-box p {
+    margin-bottom: 12px;
+    font-weight: bold;
+    color: #333;
+}
+
+.delete-confirm-box button {
+    margin: 0 10px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.delete-confirm-box .confirm {
+    background-color: #d32f2f;
+    color: white;
+}
+
+.delete-confirm-box .confirm:hover {
+    background-color: #b71c1c;
+}
+
+.delete-confirm-box .cancel {
+    background-color: #bdbdbd;
+    color: #212121;
+}
+
+.delete-confirm-box .cancel:hover {
+    background-color: #9e9e9e;
+}
+
+.edit-review-form {
+    margin-top: 10px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-review-form label {
+    display: block;
+    margin: 5px 0 2px;
+    font-weight: bold;
+}
+
+.edit-review-form select,
+.edit-review-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.edit-review-form .edit-btn {
+    background-color: #28a745;
+    margin-right: 10px;
+    color: white;
+}
+
+.edit-review-form .edit-btn:hover {
+    background-color: #218838;
+}
+
+.edit-review-form .cancel {
+    background-color: #bdbdbd;
+    color: #212121;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.edit-review-form .cancel:hover {
+    background-color: #9e9e9e;
+}
