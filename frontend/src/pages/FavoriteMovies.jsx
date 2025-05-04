@@ -5,6 +5,9 @@ import "../styles/MovieCatalog.css"; // Используем те же стил�
 const FavoriteMovies = () => {
     const [favorites, setFavorites] = useState([]);
     const navigate = useNavigate();
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState(""); // "success" или "error"
+
 
     useEffect(() => {
         fetch("http://127.0.0.1:5000/favorites", {
@@ -33,19 +36,33 @@ const FavoriteMovies = () => {
             },
             body: JSON.stringify({ movie_id: movieId })
         });
-
+    
         const data = await response.json();
         if (response.ok) {
             setFavorites(favorites.filter(movie => movie.id !== movieId));
-            alert("Filma veiksmīgi izņemta no favorītiem!");
+            setMessage("Filma veiksmīgi izņemta no favorītiem!");
+            setMessageType("success");
         } else {
-            alert(data.error || "Kļūda, izņemot filmu!");
+            setMessage(data.error || "Kļūda, izņemot filmu!");
+            setMessageType("error");
         }
+    
+        setTimeout(() => {
+            setMessage("");
+            setMessageType("");
+        }, 4000);
     };
 
     return (
         <div className="catalog-container"> 
             <h2 className="catalog-title">Mans favorītu saraksts</h2>
+
+            {message && (
+    <div className={`global-message ${messageType}`}>
+        {message}
+    </div>
+)}
+
             <button className="back-button" onClick={() => navigate("/catalog")}>
                 Atpakaļ uz katalogu
             </button>
