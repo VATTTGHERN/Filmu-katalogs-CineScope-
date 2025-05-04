@@ -263,3 +263,23 @@
     gap: 10px; /* Уменьшаем расстояние между кнопками */
     align-items: center;
 }
+
+.global-message {
+    padding: 10px 15px;
+    margin: 10px auto;
+    width: fit-content;
+    text-align: center;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.global-message.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.global-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
