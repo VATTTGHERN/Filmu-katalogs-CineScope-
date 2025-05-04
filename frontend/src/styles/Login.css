@@ -30,7 +30,7 @@
 .login-form button {
     padding: 10px;
     font-size: 18px;
-    background-color: #007bff;
+    background-color: #2aa85a;
     color: white;
     border: none;
     border-radius: 5px;
@@ -38,7 +38,7 @@
 }
 
 .login-form button:hover {
-    background-color: #0056b3;
+    background-color: #00b327a9;
 }
 
 .back-button {
@@ -65,4 +65,45 @@
     padding: 10px 0;
     color: white;
     font-size: 14px;
+}
+
+.error-message {
+    color: red;
+    font-size: 0.9em;
+    margin: 5px 0 10px;
+  }
+  
+  .login-success-popup {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    background-color: #e6ffe6;
+    color: #2e7d32;
+    padding: 30px;
+    border: 2px solid #2e7d32;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+}
+
+.login-success-popup p {
+    font-size: 18px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.login-success-popup button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.login-success-popup button:hover {
+    background-color: #218838;
 }
