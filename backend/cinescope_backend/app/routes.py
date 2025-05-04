@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request  # Добавлен импорт request для работы с данными из запроса
 from app import db
-from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters, FavoriteMovie
+from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters, FavoriteMovie, Complaint
 from datetime import datetime
 from app.auth import *
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -96,17 +96,17 @@ def add_movie():
         data = request.get_json()
 
         # ✅ Получаем все поля из запроса
-        title = data.get("title", "").strip()
-        description = data.get("description", "").strip()
-        release_date = data.get("release_date", "").strip()
+        title = (data.get("title") or "").strip()
+        description = (data.get("description") or "").strip()
+        release_date = (data.get("release_date") or "").strip()
         genres = data.get("genres", [])
-        poster_url = data.get("poster_url", "").strip()
-        trailer_url = data.get("trailer_url", "").strip()
-        country = data.get("country", "").strip()
-        box_office = data.get("box_office", "").strip()
-        awards = json.dumps(data.get("awards", []))  # 🔥 Сохраняем как JSON-строку
+        poster_url = (data.get("poster_url") or "").strip()
+        trailer_url = (data.get("trailer_url") or "").strip()
+        country = (data.get("country") or "").strip()
+        box_office = (data.get("box_office") or "").strip()
+        awards = json.dumps(data.get("awards", []))
         duration = data.get("duration")
-        age_rating = data.get("age_rating", "").strip()
+        age_rating = (data.get("age_rating") or "").strip()
 
         if not title or not release_date or not genres:
             return jsonify({"error": "Nepieciešams nosaukums, izlaišanas datums un žanrs."}), 400
@@ -288,17 +288,24 @@ def add_review():
         return jsonify({"error": "Nevar parsēt JSON!"}), 400
 
     movie_id = data.get('movie_id')
-    rating = data.get('rating', None)
-    text = data.get("text", "")
+    rating = data.get('rating')
+    text = data.get("text")
 
-    # 🔥 Исправляем ошибку с `NoneType`
-    text = text.strip() if text else None
+    # 🔧 Убираем пробелы и оставляем пустую строку, если текста нет
+    text = (text or "").strip()
 
+    # ✅ Проверяем, что хотя бы одно поле задано
     if rating is None and text is None:
         return jsonify({"error": "Jābūt vismaz vērtējumam vai tekstam!"}), 400
 
-    if rating is not None and (rating < 1 or rating > 5):
-        return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
+    if rating is not None:
+        try:
+            rating = int(rating)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Vērtējumam jābūt skaitlim no 1 līdz 5!"}), 400
+
+        if rating < 1 or rating > 5:
+            return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
 
     movie = Movie.query.get(movie_id)
     if not movie:
@@ -308,26 +315,29 @@ def add_review():
     if existing_review:
         return jsonify({"error": "Jūs jau esat atstājis atsauksmi par šo filmu!"}), 400
 
-    new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=rating)
+    # Если рейтинг не задан, устанавливаем 0
+    review_rating = rating if rating is not None else 0
+
+    new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=review_rating)
     db.session.add(new_review)
     db.session.commit()
 
+    # Пересчитываем средний рейтинг
     reviews = Review.query.filter_by(movie_id=movie_id).all()
-    avg_rating = round(sum(r.rating for r in reviews if r.rating is not None) / len(reviews), 1) if reviews else 0.0
+    valid_ratings = [r.rating for r in reviews if r.rating]
+    avg_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
 
-    response = jsonify({
+    return jsonify({
         "message": "Atsauksme veiksmīgi pievienota!",
         "review": {
             "id": new_review.id,
             "user": user.username,
-            "rating": rating,
-            "text": text
+            "rating": new_review.rating,
+            "text": new_review.text
         },
         "average_rating": avg_rating
-    })
-    
-    response.headers.add("Access-Control-Allow-Origin", "*")  # Разрешаем CORS
-    return response, 201
+    }), 201
+
 
 @bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
 def update_movie(movie_id):
@@ -904,3 +914,77 @@ def edit_review(review_id):
         "rating": review.rating,
         "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
     }}), 200
+
+@bp.route('/submit-complaint', methods=['POST'])
+def submit_complaint():
+    """Пользователь отправляет жалобу на фильм"""
+    try:
+        data = request.get_json()
+        user_email = data.get('email')  # Определяем пользователя по email
+        movie_id = data.get('movie_id')
+        subject = data.get('subject')
+        description = data.get('description')
+
+        if not user_email or not movie_id or not subject or not description:
+            return jsonify({"error": "Заполните все поля"}), 400
+
+        user = User.query.filter_by(email=user_email).first()
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        new_complaint = Complaint(
+            user_id=user.id,
+            movie_id=movie_id,
+            subject=subject,
+            description=description
+        )
+        db.session.add(new_complaint)
+        db.session.commit()
+
+        return jsonify({"message": "Жалоба отправлена"}), 201
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/view-complaints', methods=['GET'])
+def view_complaints():
+    """Модератор просматривает список жалоб"""
+    try:
+        email = request.headers.get("User-Email")  # Проверяем роль пользователя
+        user = User.query.filter_by(email=email).first()
+        if not user or not user.is_moderator():
+            return jsonify({"error": "Доступ запрещен"}), 403
+
+        complaints = Complaint.query.all()
+        complaints_list = [{
+    "id": c.id,
+    "user_email": c.user_email,
+    "movie_id": c.movie_id,
+    "subject": c.subject,
+    "description": c.text
+} for c in complaints]
+
+        return jsonify({"complaints": complaints_list})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/send-complaint', methods=['POST'])
+def send_complaint():
+    user_email = request.headers.get("User-Email")
+    data = request.get_json()
+
+    if not user_email or not data.get("movie_id") or not data.get("subject") or not data.get("text"):
+        return jsonify({"error": "Nepareizi ievadīti dati!"}), 400
+
+    new_complaint = Complaint(
+        user_email=user_email,
+        movie_id=data["movie_id"],
+        subject=data["subject"],
+        text=data["text"]
+    )
+
+    db.session.add(new_complaint)
+    db.session.commit()
+
+    return jsonify({"message": "Sūdzība veiksmīgi saņemta!"}), 201
