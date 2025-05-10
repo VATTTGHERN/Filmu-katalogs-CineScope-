@@ -6,6 +6,7 @@ from app.auth import *
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.sql import text
 import json
+from app.forbidden_words import contains_forbidden_word
 
 from app.auth import admin_required, moderator_required
 
@@ -317,6 +318,12 @@ def add_review():
 
     # Если рейтинг не задан, устанавливаем 0
     review_rating = rating if rating is not None else 0
+
+# ✅ Ja ir teksts, pārbaudām to
+    if text:
+        if contains_forbidden_word(text):
+            return jsonify({"error": "Atsauksmē ir neatļauti vārdi!"}), 400
+
 
     new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=review_rating)
     db.session.add(new_review)
@@ -898,22 +905,29 @@ def edit_review(review_id):
         return jsonify({"error": "Jūs nevarat rediģēt šo atsauksmi!"}), 403
 
     data = request.get_json()
-    new_text = data.get("text", "").strip()
+    new_text = (data.get("text") or "").strip()
     new_rating = data.get("rating")
 
     if new_rating is not None and (new_rating < 1 or new_rating > 5):
         return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
 
+    if new_text:
+        if contains_forbidden_word(new_text):
+            return jsonify({"error": "Atsauksmē ir neatļauti vārdi!"}), 400
+
     review.text = new_text if new_text else None
     review.rating = new_rating
     db.session.commit()
 
-    return jsonify({"message": "Atsauksme veiksmīgi rediģēta!", "review": {
-        "id": review.id,
-        "text": review.text,
-        "rating": review.rating,
-        "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
-    }}), 200
+    return jsonify({
+        "message": "Atsauksme veiksmīgi rediģēta!",
+        "review": {
+            "id": review.id,
+            "text": review.text,
+            "rating": review.rating,
+            "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    }), 200
 
 @bp.route('/submit-complaint', methods=['POST'])
 def submit_complaint():
