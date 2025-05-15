@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom"; // Убедись, что useNavigate импортирован
 import "../styles/MovieDetails.css";
+import { useTranslation } from 'react-i18next';
 
 const MovieDetails = () => {
     const { id } = useParams();
@@ -26,7 +27,7 @@ const MovieDetails = () => {
     const [globalMessage, setGlobalMessage] = useState("");
     const [globalMessageType, setGlobalMessageType] = useState(""); // 'success' или 'error'
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-    
+    const { t, i18n } = useTranslation();
 
     useEffect(() => {
         const backendUrl = "http://127.0.0.1:5000/";
@@ -189,7 +190,7 @@ const fetchMovie = async () => {
             await fetchMovie(); // ✅ обновляем отзывы и рейтинг
             setRating(0);
             setReviewText("");
-            setReviewSuccess("Atsauksme veiksmīgi pievienota!");
+            setReviewSuccess(t("success"));
             setTimeout(() => setReviewSuccess(""), 4000);
         } catch (err) {
             setReviewMessageError("Kļūda, pievienojot atsauksmi: " + err.message);
@@ -231,9 +232,9 @@ const fetchMovie = async () => {
         const userEmail = localStorage.getItem("email");
     
         const updatedReview = {
-            text: editText.trim(),
-            rating: editRating
-        };
+    text: editText.trim(),
+    rating: Number.isInteger(editRating) ? editRating : 0
+};
     
         try {
             const response = await fetch(`http://127.0.0.1:5000/edit-review/${reviewId}`, {
@@ -334,8 +335,11 @@ const fetchMovie = async () => {
         <div className="movie-details-container">
             {/* Верхняя навигация */}
             <div className="top-navigation">
+                <div className="lang-switcher">
+</div>
+
                 <button className="back-button" onClick={() => navigate("/catalog")}>
-                    Atgriezties katalogā
+                    {t("backToCatalog")}
                 </button>
     
                 {/* Если админ, показываем кнопку "Редактировать фильм" */}
@@ -481,32 +485,40 @@ const fetchMovie = async () => {
   </p>
 )}
 {reviewMessage && <p className="success-message">{reviewMessage}</p>}
-{reviewMessageError && <p className="error-message">{reviewMessageError}</p>}
 <ul className="reviews-list">
     {isLoggedIn && (
         <div className="review-form">
-            <h3 className="review-section-title">Pievienot atsauksmi:</h3>
+            <h3 className="review-section-title">{t("addReview")}:</h3>
 
 <div className="review-messages">
-  {reviewError && <p className="error-message">{reviewError}</p>}
+  {reviewError && (
+    <div className="review-error-container">
+      <p className="error-message">{reviewError}</p>
+    </div>
+  )}
+  {reviewMessageError && (
+    <div className="review-error-container">
+      <p className="error-message">{reviewMessageError}</p>
+    </div>
+  )}
   {reviewSuccess && <p className="success-message">{reviewSuccess}</p>}
 </div>
 
 <form onSubmit={handleReviewSubmit}>
-                <label>Vērtējums:</label>
+                <label>{t("rating")}:</label>
                 <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
-                    <option value="0">Nav vērtējuma</option>
+                    <option value="0">{t("noRating")}</option>
                     {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
                 </select>
 
-                <label>Atsauksmes teksts:</label>
+                <label>{t("reviewText")}:</label>
                 <textarea
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
                     placeholder="Ievadiet savu atsauksmi (nav obligāti)"
                 />
 
-                <button type="submit">Pievienot atsauksmi</button>
+                <button type="submit">{t("submit")}</button>
             </form>
         </div>
     )}
@@ -514,7 +526,12 @@ const fetchMovie = async () => {
     {movie.reviews?.length > 0 ? (
         movie.reviews.map((review) => (
             <li key={review.id}>
-                <strong>{review.user}</strong> (Vērtējums: {review.rating}/5) <br />
+                <strong>{review.user}</strong>
+{Number(review.rating) > 0 && (
+  <span style={{ marginLeft: "5px", color: "#ffc107" }}>
+    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+  </span>
+)} <br />
                 <small>
                     Izveidots: {new Date(review.created_at).toLocaleString("lv-LV", { 
                         year: 'numeric', month: '2-digit', day: '2-digit', 
@@ -527,8 +544,9 @@ const fetchMovie = async () => {
   <div className="edit-review-form">
     <label>Jauns vērtējums:</label>
     <select value={editRating} onChange={(e) => setEditRating(Number(e.target.value))}>
-      {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
-    </select>
+  <option value={0}>Nav vērtējuma</option>
+  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
+</select>
 
     <label>Jauns teksts:</label>
     <textarea 
@@ -541,7 +559,6 @@ const fetchMovie = async () => {
     <button className="cancel" onClick={() => setEditingReview(null)}>Atcelt</button>
   </div>
 )}
-
 
                 {/* Кнопки "Редактировать" и "Удалить" отображаются только у автора отзыва */}
                 {isLoggedIn && localStorage.getItem("email") === review.user && (
@@ -558,14 +575,14 @@ const fetchMovie = async () => {
 </button>
         {confirmDeleteId === review.id ? (
   <div className="delete-confirm-box">
-    <p>Vai tiešām dzēst šo atsauksmi?</p>
+    <p>{t("confirmDelete")}</p>
     <button className="confirm" onClick={() => handleDeleteReview(review.id)}>Jā</button>
     <button className="cancel" onClick={() => setConfirmDeleteId(null)}>Nē</button>
   </div>
 ) : (
-  <button className="delete-btn" onClick={() => setConfirmDeleteId(review.id)}>
-    Dzēst
-  </button>
+<button className="delete-btn" onClick={() => setConfirmDeleteId(review.id)}>
+  {t("delete")}
+</button>
 )}
     </div>
 )}
