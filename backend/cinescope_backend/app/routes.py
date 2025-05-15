@@ -764,8 +764,10 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
             for review in reviews
         ]
 
-        # Пересчитываем средний рейтинг
-        average_rating = round(sum([r.rating for r in reviews]) / len(reviews), 1) if reviews else 0.0
+        # ✅ Пересчитываем средний рейтинг только по отзывам с оценкой
+        valid_ratings = [r.rating for r in reviews if r.rating and r.rating > 0]
+        average_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
+
 
         # ✅ Добавлены новые поля
         return jsonify({
@@ -889,10 +891,10 @@ def toggle_block_user(user_id):
 @bp.route('/edit-review/<int:review_id>', methods=['PUT'])
 def edit_review(review_id):
     user_email = request.headers.get("User-Email")
-    
+
     if not user_email:
         return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
-    
+
     user = User.query.filter_by(email=user_email).first()
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
@@ -906,18 +908,32 @@ def edit_review(review_id):
 
     data = request.get_json()
     new_text = (data.get("text") or "").strip()
-    new_rating = data.get("rating")
 
-    if new_rating is not None and (new_rating < 1 or new_rating > 5):
-        return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
+    try:
+        new_rating = int(data.get("rating", 0))
+        if new_rating < 0 or new_rating > 5:
+            return jsonify({"error": "Vērtējumam jābūt no 0 līdz 5!"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Vērtējumam jābūt skaitlim no 0 līdz 5!"}), 400
 
+    # ✅ Если есть текст — проверяем плохие слова
     if new_text:
         if contains_forbidden_word(new_text):
             return jsonify({"error": "Atsauksmē ir neatļauti vārdi!"}), 400
 
+    # ✅ Разрешаем оставить только оценку или только текст
+    if not new_text and new_rating == 0:
+        return jsonify({"error": "Jābūt vismaz vērtējumam vai atsauksmes tekstam!"}), 400
+
     review.text = new_text if new_text else None
     review.rating = new_rating
     db.session.commit()
+
+    # ✅ Пересчитываем среднюю оценку
+    movie_id = review.movie_id
+    all_reviews = Review.query.filter_by(movie_id=movie_id).all()
+    valid_ratings = [r.rating for r in all_reviews if r.rating > 0]
+    average_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
 
     return jsonify({
         "message": "Atsauksme veiksmīgi rediģēta!",
@@ -926,59 +942,37 @@ def edit_review(review_id):
             "text": review.text,
             "rating": review.rating,
             "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        }
+        },
+        "average_rating": average_rating
     }), 200
-
-@bp.route('/submit-complaint', methods=['POST'])
-def submit_complaint():
-    """Пользователь отправляет жалобу на фильм"""
-    try:
-        data = request.get_json()
-        user_email = data.get('email')  # Определяем пользователя по email
-        movie_id = data.get('movie_id')
-        subject = data.get('subject')
-        description = data.get('description')
-
-        if not user_email or not movie_id or not subject or not description:
-            return jsonify({"error": "Заполните все поля"}), 400
-
-        user = User.query.filter_by(email=user_email).first()
-        if not user:
-            return jsonify({"error": "Пользователь не найден"}), 404
-
-        new_complaint = Complaint(
-            user_id=user.id,
-            movie_id=movie_id,
-            subject=subject,
-            description=description
-        )
-        db.session.add(new_complaint)
-        db.session.commit()
-
-        return jsonify({"message": "Жалоба отправлена"}), 201
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @bp.route('/view-complaints', methods=['GET'])
 def view_complaints():
     """Модератор просматривает список жалоб"""
     try:
-        email = request.headers.get("User-Email")  # Проверяем роль пользователя
+        email = request.headers.get("User-Email")
         user = User.query.filter_by(email=email).first()
         if not user or not user.is_moderator():
             return jsonify({"error": "Доступ запрещен"}), 403
 
         complaints = Complaint.query.all()
-        complaints_list = [{
-    "id": c.id,
-    "user_email": c.user_email,
-    "movie_id": c.movie_id,
-    "subject": c.subject,
-    "description": c.text
-} for c in complaints]
 
-        return jsonify({"complaints": complaints_list})
+        complaints_list = []
+        for c in complaints:
+            movie = Movie.query.get(c.movie_id)
+            movie_title = movie.title if movie else f"ID: {c.movie_id}"
+            
+            complaints_list.append({
+                "id": c.id,
+                "user_email": c.user_email,
+                "movie_title": movie_title,
+                "subject": c.subject,
+                "text": c.text,
+                "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else None,
+                "status": c.status
+            })
+
+        return jsonify({"complaints": complaints_list}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -991,8 +985,13 @@ def send_complaint():
     if not user_email or not data.get("movie_id") or not data.get("subject") or not data.get("text"):
         return jsonify({"error": "Nepareizi ievadīti dati!"}), 400
 
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
     new_complaint = Complaint(
         user_email=user_email,
+        user_id=user.id,  # 👈 теперь добавляем ID
         movie_id=data["movie_id"],
         subject=data["subject"],
         text=data["text"]
@@ -1002,3 +1001,25 @@ def send_complaint():
     db.session.commit()
 
     return jsonify({"message": "Sūdzība veiksmīgi saņemta!"}), 201
+
+@bp.route('/resolve-complaint/<int:complaint_id>', methods=['PUT'])
+def resolve_complaint(complaint_id):
+    try:
+        action = request.args.get("action")  # "resolved" or "rejected"
+        if action not in ["resolved", "rejected"]:
+            return jsonify({"error": "Nepareiza darbība!"}), 400
+
+        complaint = Complaint.query.get(complaint_id)
+        if not complaint:
+            return jsonify({"error": "Sūdzība nav atrasta!"}), 404
+
+        if action == "resolved":
+            complaint.status = "atrisināta"
+        elif action == "rejected":
+            complaint.status = "noraidīta"
+
+        db.session.commit()
+        return jsonify({"message": f"Sūdzība veiksmīgi atzīmēta kā '{complaint.status}'!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
