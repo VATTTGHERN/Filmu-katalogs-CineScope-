@@ -274,7 +274,7 @@ const fetchMovie = async () => {
         }
     
         try {
-            const response = await fetch("http://127.0.0.1:5000/send-complaint", {
+            const response = await fetch("/send-complaint", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -334,50 +334,37 @@ const fetchMovie = async () => {
     return (
         <div className="movie-details-container">
             {/* Верхняя навигация */}
-            <div className="top-navigation">
-                <div className="lang-switcher">
-</div>
+<div className="top-navigation">
+    <div className="left-navigation">
+        <button className="back-button" onClick={() => navigate("/catalog")}>
+            {t("backToCatalog")}
+        </button>
+    </div>
 
-                <button className="back-button" onClick={() => navigate("/catalog")}>
-                    {t("backToCatalog")}
+    <div className="auth-buttons">
+        {!localStorage.getItem("token") ? (
+            <>
+                <button className="auth-button login-button" onClick={() => navigate("/login")}>
+                    Ienākt
                 </button>
-    
-                {/* Если админ, показываем кнопку "Редактировать фильм" */}
-
-{localStorage.getItem("role") === "admin" && movie && (
-    <>
-        <button className="edit-movie-btn" onClick={() => navigate(`/edit-movie/${movie.id}`)}>
-            Rediģēt filmu
-        </button>
-        <button className="delete-movie-btn" onClick={() => handleDelete(movie.id)}>
-            Dzēst filmu
-        </button>
-    </>
-)}
-
-                <div className="auth-buttons">
-                    {/* Если НЕ вошел в аккаунт */}
-                    {!localStorage.getItem("token") ? (
-                        <>
-                            <button className="auth-button login-button" onClick={() => navigate("/login")}>
-                                Ienākt
-                            </button>
-                            <button className="auth-button register-button" onClick={() => navigate("/register")}>
-                                Reģistrēties
-                            </button>
-                        </>
-                    ) : (
-                        /* Если вошел в аккаунт */
-                        <button className="logout-button" onClick={() => {
-                            localStorage.removeItem("token");
-                            localStorage.removeItem("role");
-                            navigate("/catalog");
-                        }}>
-                            Izrakstīties
-                        </button>
-                    )}
-                </div>
-            </div>    
+                <button className="auth-button register-button" onClick={() => navigate("/register")}>
+                    Reģistrēties
+                </button>
+            </>
+        ) : (
+            <button
+                className="logout-button"
+                onClick={() => {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("role");
+                    navigate("/catalog");
+                }}
+            >
+                Izrakstīties
+            </button>
+        )}
+    </div>
+</div>    
 
             <h1 className="movie-title">{movie.title}</h1>
             <img src={movie.poster_url || "https://via.placeholder.com/300"} alt={movie.title} className="movie-details-image"/>
