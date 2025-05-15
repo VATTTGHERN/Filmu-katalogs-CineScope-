@@ -74,6 +74,12 @@ const MovieCatalog = () => {
     </button>
 )}
 
+{userRole === "moderator" && (
+    <button className="moderator-button fixed-button" onClick={() => navigate("/moderator")}>
+        Sūdzības
+    </button>
+)}
+
         {/* 🔥 Кнопки для администратора */}
         {localStorage.getItem("role") === "admin" && (
     <div className="admin-buttons">
