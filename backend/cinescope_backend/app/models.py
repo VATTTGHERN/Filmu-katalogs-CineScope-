@@ -15,6 +15,28 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def __repr__(self):
+        return f'<User {self.username} - Role: {self.role}>'
+    
+    def is_moderator(self):
+        return self.role == "moderator"
+    
+    def is_admin(self):
+        return self.role == "admin"
+    
+class Complaint(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_email = db.Column(db.String(120), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey("movie.id"), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), nullable=True, default="neatrisināta")  # ✅ Добавлено
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    def __repr__(self):
+        return f'<Complaint from {self.user_email} on {self.movie_id}>'
 
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
