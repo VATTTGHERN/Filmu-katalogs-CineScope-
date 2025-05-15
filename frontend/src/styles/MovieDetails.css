@@ -503,3 +503,33 @@ h3 {
 .edit-review-form .cancel:hover {
     background-color: #9e9e9e;
 }
+
+.reviews-list li span {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.review-messages .error-message {
+  margin-bottom: 15px; /* Отступ снизу */
+}
+
+.review-error-container {
+  margin-bottom: 10px;
+}
+
+.left-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1;
+}
+
+.login-footer {
+  margin-top: 40px;
+  padding: 12px 0;
+  background-color: #23272a;
+  color: white;
+  text-align: center;
+  font-size: 14px;
+  border-radius: 0 0 10px 10px;
+}
