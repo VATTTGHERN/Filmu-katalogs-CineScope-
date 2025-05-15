@@ -11,6 +11,7 @@ import "./styles/global.css";
 import Profile from "./pages/Profile";
 import ManageUsers from "./pages/ManageUsers";
 import FavoriteMovies from "./pages/FavoriteMovies";
+import ModeratorPanel from "./pages/ModeratorPanel";
 
 const App = () => {
     return (
@@ -27,8 +28,7 @@ const App = () => {
                 <Route path="*" element={<MovieCatalog />} /> {/* Перенаправление на каталог по умолчанию */}
                 <Route path="/manage-users" element={<ManageUsers />} /> {/* 🔥 Новый маршрут */}
                 <Route path="/favorites" element={<FavoriteMovies />} />
-
-
+                <Route path="/moderator" element={<ModeratorPanel />} />
             </Routes>
         </Router>
     );
