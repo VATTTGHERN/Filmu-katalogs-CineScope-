@@ -401,6 +401,23 @@ const fetchMovie = async () => {
     </button>
 )}
 
+{isLoggedIn && localStorage.getItem("role") === "admin" && (
+    <div className="admin-buttons-container">
+        <button
+            className="edit-movie-btn"
+            onClick={() => navigate(`/edit-movie/${movie.id}`)}
+        >
+            Rediģēt filmu
+        </button>
+        <button
+            className="delete-movie-btn"
+            onClick={() => handleDelete(movie.id)}
+        >
+            Dzēst filmu
+        </button>
+    </div>
+)}
+
 {/* Трейлер */}
 {movie.trailer_url && (
                 <div className="trailer-container">
