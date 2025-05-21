@@ -76,16 +76,20 @@ def add_user():
 @bp.route('/get-users', methods=['GET'])
 def get_users():
     try:
-        # Получаем всех пользователей из базы данных
         users = User.query.all()
-        # Преобразуем объекты пользователей в список словарей
         user_list = [
-            {"id": user.id, "username": user.username, "email": user.email}
+            {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "is_blocked": user.is_blocked  # 💥 Это решает твою проблему!
+            }
             for user in users
         ]
         return jsonify({"users": user_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @bp.route("/add-movie", methods=["POST"])
 def add_movie():
