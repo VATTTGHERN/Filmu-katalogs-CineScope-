@@ -68,3 +68,89 @@
     margin-bottom: 5px;
     color: #333;
 }
+
+.login-success-popup {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    background-color: #e6ffe6;
+    color: #2e7d32;
+    padding: 30px;
+    border: 2px solid #2e7d32;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+}
+
+.login-success-popup p {
+    font-size: 18px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.login-success-popup button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.login-success-popup button:hover {
+    background-color: #218838;
+}
+
+.back-button {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #6c757d;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.back-button:hover {
+    background-color: #5a6268;
+}
+
+.login-success-popup {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    background-color: #e6ffe6;
+    color: #2e7d32;
+    padding: 30px;
+    border: 2px solid #2e7d32;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+}
+
+.login-success-popup p {
+    font-size: 18px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.login-success-popup button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.login-success-popup button:hover {
+    background-color: #218838;
+}
