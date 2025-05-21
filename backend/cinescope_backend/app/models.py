@@ -34,6 +34,7 @@ class Complaint(db.Model):
     text = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(50), nullable=True, default="neatrisināta")  # ✅ Добавлено
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    review_id = db.Column(db.Integer, db.ForeignKey("review.id"), nullable=True)
 
     def __repr__(self):
         return f'<Complaint from {self.user_email} on {self.movie_id}>'
