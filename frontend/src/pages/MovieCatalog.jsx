@@ -74,7 +74,7 @@ const MovieCatalog = () => {
     </button>
 )}
 
-{userRole === "moderator" && (
+{["moderator", "admin"].includes(userRole) && (
     <button className="moderator-button fixed-button" onClick={() => navigate("/moderator")}>
         Sūdzības
     </button>
