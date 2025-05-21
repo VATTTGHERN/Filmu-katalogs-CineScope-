@@ -760,7 +760,7 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         review_list = [
             {
                 "id": review.id,
-                "user": review.user.email, # ✅ Теперь передается email автора
+                "user": review.user.username, # ✅ Теперь передается email автора
                 "text": review.text,
                 "rating": review.rating,
                 "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')  # ✅ Форматируем дату
@@ -952,19 +952,23 @@ def edit_review(review_id):
 
 @bp.route('/view-complaints', methods=['GET'])
 def view_complaints():
-    """Модератор просматривает список жалоб"""
+    """Модератор или администратор просматривает список жалоб"""
     try:
         email = request.headers.get("User-Email")
         user = User.query.filter_by(email=email).first()
-        if not user or not user.is_moderator():
-            return jsonify({"error": "Доступ запрещен"}), 403
 
-        complaints = Complaint.query.all()
+        # ✅ Разрешаем доступ и модератору, и администратору
+        if not user or not (user.is_moderator() or user.is_admin()):
+            return jsonify({"error": "Darbība nav atļauta"}), 403
+
+        complaints = Complaint.query.filter_by(status="neatrisināta").all()
 
         complaints_list = []
         for c in complaints:
             movie = Movie.query.get(c.movie_id)
             movie_title = movie.title if movie else f"ID: {c.movie_id}"
+            review = Review.query.get(c.review_id) if c.review_id else None
+            review_text = review.text if review else None
             
             complaints_list.append({
                 "id": c.id,
@@ -973,7 +977,8 @@ def view_complaints():
                 "subject": c.subject,
                 "text": c.text,
                 "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else None,
-                "status": c.status
+                "status": c.status,
+                "review_text": review_text
             })
 
         return jsonify({"complaints": complaints_list}), 200
@@ -998,7 +1003,8 @@ def send_complaint():
         user_id=user.id,  # 👈 теперь добавляем ID
         movie_id=data["movie_id"],
         subject=data["subject"],
-        text=data["text"]
+        text=data["text"],
+        review_id=data.get("review_id")
     )
 
     db.session.add(new_complaint)
@@ -1017,13 +1023,11 @@ def resolve_complaint(complaint_id):
         if not complaint:
             return jsonify({"error": "Sūdzība nav atrasta!"}), 404
 
-        if action == "resolved":
-            complaint.status = "atrisināta"
-        elif action == "rejected":
-            complaint.status = "noraidīta"
-
+        # ❗️Удаляем жалобу полностью, независимо от действия
+        db.session.delete(complaint)
         db.session.commit()
-        return jsonify({"message": f"Sūdzība veiksmīgi atzīmēta kā '{complaint.status}'!"}), 200
+
+        return jsonify({"message": "Sūdzība veiksmīgi dzēsta!"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
