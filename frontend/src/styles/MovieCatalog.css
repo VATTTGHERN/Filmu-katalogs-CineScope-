@@ -283,3 +283,21 @@
     background-color: #f8d7da;
     color: #721c24;
 }
+
+.moderator-button {
+    background-color: #6f42c1; /* Фиолетовый */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.moderator-button:hover {
+    background-color: #5a32a3;
+    transform: scale(1.05);
+}
