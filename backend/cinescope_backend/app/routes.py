@@ -670,8 +670,8 @@ def delete_review(review_id):
     if not review:
         return jsonify({"error": "Atsauksme nav atrasta!"}), 404
 
-    if review.user_id != user.id:
-        return jsonify({"error": "Jūs nevarat dzēst šo atsauksmi!"}), 403
+    if review.user_id != user.id and not user.is_moderator() and not user.is_admin():
+        return jsonify({"error": "Jums nav tiesību dzēst šo atsauksmi!"}), 403
 
     db.session.delete(review)
     db.session.commit()
@@ -760,7 +760,8 @@ def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не 
         review_list = [
             {
                 "id": review.id,
-                "user": review.user.username, # ✅ Теперь передается email автора
+                "user_email": review.user.email,
+                "user_name": review.user.username, # ✅ Теперь передается email автора
                 "text": review.text,
                 "rating": review.rating,
                 "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')  # ✅ Форматируем дату
@@ -907,8 +908,8 @@ def edit_review(review_id):
     if not review:
         return jsonify({"error": "Atsauksme nav atrasta!"}), 404
 
-    if review.user_id != user.id:
-        return jsonify({"error": "Jūs nevarat rediģēt šo atsauksmi!"}), 403
+    if review.user_id != user.id and not user.is_moderator():
+        return jsonify({"error": "Jūs nevarat dzēst šo atsauksmi!"}), 403
 
     data = request.get_json()
     new_text = (data.get("text") or "").strip()
@@ -978,7 +979,9 @@ def view_complaints():
                 "text": c.text,
                 "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else None,
                 "status": c.status,
-                "review_text": review_text
+                "review_text": review_text,
+                "type": "movie",
+                "type": "review" if c.review_id else "movie"
             })
 
         return jsonify({"complaints": complaints_list}), 200
