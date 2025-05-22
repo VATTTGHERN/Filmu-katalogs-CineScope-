@@ -6,6 +6,7 @@ const ModeratorPanel = () => {
     const [complaints, setComplaints] = useState([]);
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
 
     useEffect(() => {
         const fetchComplaints = async () => {
@@ -34,7 +35,6 @@ const ModeratorPanel = () => {
 
             if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
 
-            // ✅ Удаляем жалобу из списка после обработки
             setComplaints((prev) => prev.filter((c) => c.id !== id));
         } catch (err) {
             alert("Kļūda, mainot sūdzības statusu: " + err.message);
@@ -42,28 +42,31 @@ const ModeratorPanel = () => {
     };
 
     const handleDeleteReview = async (reviewId, complaintId) => {
-        const confirm = window.confirm("Vai tiešām vēlaties dzēst šo atsauksmi?");
-        if (!confirm) return;
+    if (!reviewId) {
+        alert("Nav atsauksmes ID! Sūdzība nav par atsauksmi.");
+        return;
+    }
 
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
-                method: "DELETE",
-                headers: {
-                    "User-Email": localStorage.getItem("email"),
-                },
-            });
+    const confirm = window.confirm("Vai tiešām vēlaties dzēst šo atsauksmi?");
+    if (!confirm) return;
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
+            method: "DELETE",
+            headers: {
+                "User-Email": localStorage.getItem("email"),
+            },
+        });
 
-            alert("Atsauksme veiksmīgi dzēsta!");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
 
-            // ✅ После удаления отзыва — помечаем жалобу как решённую и убираем из списка
-            await handleComplaintAction(complaintId, "resolved");
-        } catch (err) {
-            alert("Kļūda dzēšot atsauksmi: " + err.message);
-        }
-    };
+        alert("Atsauksme veiksmīgi dzēsta!");
+        await handleComplaintAction(complaintId, "resolved");
+    } catch (err) {
+        alert("Kļūda dzēšot atsauksmi: " + err.message);
+    }
+};
 
     return (
         <div className="moderator-panel">
@@ -86,26 +89,27 @@ const ModeratorPanel = () => {
                             <p><strong>Tēma:</strong> {complaint.subject}</p>
                             <p><strong>Apraksts:</strong> {complaint.text}</p>
 
-                            {complaint.review_text && (
-                                <>
-                                    <p><strong>Saistītā atsauksme:</strong> {complaint.review_text}</p>
-                                    <button
-                                        className="remove-button"
-                                        onClick={() => handleDeleteReview(complaint.review_id, complaint.id)}
-                                    >
-                                        Dzēst atsauksmi
-                                    </button>
-                                </>
-                            )}
+                            <p><strong>Sūdzības tips:</strong> {complaint.type === "review" ? "Par atsauksmi" : "Par filmu"}</p>
 
-                            <div className="moderator-actions">
-                                <button onClick={() => handleComplaintAction(complaint.id, "resolved")}>
-                                    Atrisināt
-                                </button>
-                                <button onClick={() => handleComplaintAction(complaint.id, "rejected")}>
-                                    Noraidīt
-                                </button>
-                            </div>
+                            {complaint.review_text && (
+    <p><strong>Saistītā atsauksme:</strong> {complaint.review_text}</p>
+)}
+
+                            {(complaint.type === "movie" && userRole === "admin") ||
+                             (complaint.type === "review" && userRole === "moderator") ? (
+                                <div className="moderator-actions">
+                                    <button onClick={() => handleComplaintAction(complaint.id, "resolved")}>
+                                        Atrisināt
+                                    </button>
+                                    <button onClick={() => handleComplaintAction(complaint.id, "rejected")}>
+                                        Noraidīt
+                                    </button>
+                                </div>
+                            ) : (
+                                <p style={{ color: "#999", fontStyle: "italic" }}>
+                                    Jums nav tiesību apstrādāt šo sūdzību.
+                                </p>
+                            )}
                         </li>
                     ))}
                 </ul>
