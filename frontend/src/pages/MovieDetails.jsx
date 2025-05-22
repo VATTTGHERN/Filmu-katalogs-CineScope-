@@ -28,6 +28,7 @@ const MovieDetails = () => {
     const [globalMessageType, setGlobalMessageType] = useState(""); // 'success' или 'error'
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const { t, i18n } = useTranslation();
+    const [selectedReviewId, setSelectedReviewId] = useState(null);
 
     useEffect(() => {
         const backendUrl = "http://127.0.0.1:5000/";
@@ -283,7 +284,8 @@ const fetchMovie = async () => {
                 body: JSON.stringify({
                     movie_id: parseInt(id),  // ✅ Убедились, что `movie_id` - число
                     subject: complaintSubject.trim(),
-                    text: complaintText.trim()
+                    text: complaintText.trim(),
+                    review_id: selectedReviewId  // ✅ если null, значит sūdzība par filmu
                 })
             });
     
@@ -297,6 +299,7 @@ const fetchMovie = async () => {
             setIsComplaintOpen(false);
             setComplaintSubject("");
             setComplaintText("");
+            setSelectedReviewId(null);
         } catch (error) {
             console.error("Kļūda, nosūtot sūdzību:", error);
             setGlobalMessage("Neizdevās nosūtīt sūdzību: " + error.message);
@@ -509,99 +512,128 @@ const fetchMovie = async () => {
 </div>
 
 <form onSubmit={handleReviewSubmit}>
-                <label>{t("rating")}:</label>
-                <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
-                    <option value="0">{t("noRating")}</option>
-                    {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
-                </select>
+    <label>{t("rating")}:</label>
+    <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+        <option value="0">{t("noRating")}</option>
+        {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
+    </select>
 
-                <label>{t("reviewText")}:</label>
-                <textarea
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    placeholder="Ievadiet savu atsauksmi (nav obligāti)"
-                />
+    <label>{t("reviewText")}:</label>
+    <textarea
+        value={reviewText}
+        onChange={(e) => setReviewText(e.target.value)}
+        placeholder="Ievadiet savu atsauksmi (nav obligāti)"
+    />
 
-                <button type="submit">{t("submit")}</button>
-            </form>
+    <button type="submit">{t("submit")}</button>
+</form>
         </div>
     )}
 
     {movie.reviews?.length > 0 ? (
-        movie.reviews.map((review) => (
-            <li key={review.id}>
-                <strong>{review.user}</strong>
-{Number(review.rating) > 0 && (
-  <span style={{ marginLeft: "5px", color: "#ffc107" }}>
-    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
-  </span>
-)} <br />
-                <small>
-                    Izveidots: {new Date(review.created_at).toLocaleString("lv-LV", { 
-                        year: 'numeric', month: '2-digit', day: '2-digit', 
-                        hour: '2-digit', minute: '2-digit' 
-                    })}
-                </small>
-                <p>{review.text}</p>
+    movie.reviews.map((review) => (
+        <li key={review.id}>
+            <strong>{review.user_name}</strong>
+            {Number(review.rating) > 0 && (
+              <span style={{ marginLeft: "5px", color: "#ffc107" }}>
+                {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+              </span>
+            )} <br />
+            <small>
+                Izveidots: {new Date(review.created_at).toLocaleString("lv-LV", { 
+                    year: 'numeric', month: '2-digit', day: '2-digit', 
+                    hour: '2-digit', minute: '2-digit' 
+                })}
+            </small>
+            <p>{review.text}</p>
 
-                {editingReview === review.id && (
-  <div className="edit-review-form">
-    <label>Jauns vērtējums:</label>
-    <select value={editRating} onChange={(e) => setEditRating(Number(e.target.value))}>
-  <option value={0}>Nav vērtējuma</option>
-  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
-</select>
+            {/* Кнопка для подачи sūdzības на atsauksmi */}
+            {isLoggedIn && localStorage.getItem("email") !== review.user_email && review.text && (
+                <button
+                    className="complaint-button"
+                    onClick={() => {
+                        setIsComplaintOpen(true);
+                        setComplaintSubject("Sūdzība par atsauksmi");
+                        setComplaintText(`Atsauksme: "${review.text}"`);
+                        setSelectedReviewId(review.id);
+                    }}
+                >
+                    Sūdzība
+                </button>
+            )}
 
-    <label>Jauns teksts:</label>
-    <textarea 
-      value={editText} 
-      onChange={(e) => setEditText(e.target.value)} 
-      placeholder="Rediģējiet savu atsauksmi" 
-    />
+            {editingReview === review.id && (
+              <div className="edit-review-form">
+                <label>Jauns vērtējums:</label>
+                <select value={editRating} onChange={(e) => setEditRating(Number(e.target.value))}>
+                    <option value={0}>Nav vērtējuma</option>
+                    {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} ★</option>)}
+                </select>
 
-    <button className="edit-btn" onClick={() => handleEditReview(review.id)}>Saglabāt</button>
-    <button className="cancel" onClick={() => setEditingReview(null)}>Atcelt</button>
-  </div>
-)}
+                <label>Jauns teksts:</label>
+                <textarea 
+                  value={editText} 
+                  onChange={(e) => setEditText(e.target.value)} 
+                  placeholder="Rediģējiet savu atsauksmi" 
+                />
 
-                {/* Кнопки "Редактировать" и "Удалить" отображаются только у автора отзыва */}
-                {isLoggedIn && localStorage.getItem("email") === review.user && (
-    <div className="review-actions">
-        <button 
-  className="edit-btn" 
-  onClick={() => {
-    setEditingReview(review.id);
-    setEditText(review.text);
-    setEditRating(review.rating);
-  }}
->
-  Rediģēt
-</button>
-        {confirmDeleteId === review.id ? (
-  <div className="delete-confirm-box">
-    <p>{t("confirmDelete")}</p>
-    <button className="confirm" onClick={() => handleDeleteReview(review.id)}>Jā</button>
-    <button className="cancel" onClick={() => setConfirmDeleteId(null)}>Nē</button>
-  </div>
+                <button className="edit-btn" onClick={() => handleEditReview(review.id)}>Saglabāt</button>
+                <button className="cancel" onClick={() => setEditingReview(null)}>Atcelt</button>
+              </div>
+            )}
+
+            {/* Кнопки "Редaktēt" и "Dzēst" для автора */}
+            {isLoggedIn && localStorage.getItem("email") === review.user_email && (
+                <div className="review-actions">
+                    <button 
+                      className="edit-btn" 
+                      onClick={() => {
+                        setEditingReview(review.id);
+                        setEditText(review.text);
+                        setEditRating(review.rating);
+                      }}
+                    >
+                      Rediģēt
+                    </button>
+                    {confirmDeleteId === review.id ? (
+                      <div className="delete-confirm-box">
+                        <p>{t("confirmDelete")}</p>
+                        <button className="confirm" onClick={() => handleDeleteReview(review.id)}>Jā</button>
+                        <button className="cancel" onClick={() => setConfirmDeleteId(null)}>Nē</button>
+                      </div>
+                    ) : (
+                      <button className="delete-btn" onClick={() => setConfirmDeleteId(review.id)}>
+                        {t("delete")}
+                      </button>
+                    )}
+                </div>
+            )}
+
+            {/* Кнопка удаления atsauksmes для модератора/админа */}
+            {isLoggedIn &&
+                (localStorage.getItem("role") === "moderator" || localStorage.getItem("role") === "admin") &&
+                localStorage.getItem("email") !== review.user_email && (
+                    <div className="review-actions">
+                        <button
+                            className="delete-btn"
+                            onClick={() => handleDeleteReview(review.id)}
+                        >
+                            Dzēst atsauksmi
+                        </button>
+                    </div>
+            )}
+        </li>
+    ))
 ) : (
-<button className="delete-btn" onClick={() => setConfirmDeleteId(review.id)}>
-  {t("delete")}
-</button>
+    <p>Nav atsauksmju</p>
 )}
-    </div>
-)}
-            </li>
-        ))
-    ) : (
-        <p>Nav atsauksmju</p>
-    )}
 </ul>
 
-            {/* Footer */}
-            <footer className="footer">
-                <p>Autori: Maksims Goldmann, Timofejs Kravčuks, P2-4</p>
-                <p>Filmu katalogs "CineScope"</p>
-            </footer>
+{/* Footer */}
+<footer className="footer">
+    <p>Autori: Maksims Goldmann, Timofejs Kravčuks, P2-4</p>
+    <p>Filmu katalogs "CineScope"</p>
+</footer>
         </div>
     );
 };
