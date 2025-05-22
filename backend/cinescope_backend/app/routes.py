@@ -1034,3 +1034,64 @@ def resolve_complaint(complaint_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/get-user-reviews', methods=['GET'])
+def get_user_reviews():
+    user_email = request.headers.get("User-Email")
+    if not user_email:
+        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
+    reviews = Review.query.filter_by(user_id=user.id).all()
+    review_list = [{
+        "id": r.id,
+        "movie_id": r.movie_id,
+        "movie_title": Movie.query.get(r.movie_id).title if Movie.query.get(r.movie_id) else "Nezināma filma",
+        "text": r.text,
+        "rating": r.rating,
+        "created_at": r.created_at.strftime('%Y-%m-%d %H:%M')
+    } for r in reviews]
+
+    return jsonify({"reviews": review_list}), 200
+
+@bp.route('/update-profile', methods=['PUT'])
+def update_profile():
+    user_email = request.headers.get("User-Email")
+    data = request.get_json()
+
+    new_username = (data.get("username") or "").strip()
+    new_email = (data.get("email") or "").strip()
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    if not user_email:
+        return jsonify({"error": "Nav norādīts e-pasts"}), 400
+
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+
+    # ✅ Проверка пароля, если меняется
+    if new_password:
+        if not current_password or not user.check_password(current_password):
+            return jsonify({"error": "Nepareiza pašreizējā parole!"}), 400
+        user.set_password(new_password)
+
+    # ✅ Проверка имени и почты
+    if new_username and new_username != user.username:
+        user.username = new_username
+    if new_email and new_email != user.email:
+        if User.query.filter_by(email=new_email).first():
+            return jsonify({"error": "Šis e-pasts jau ir aizņemts!"}), 400
+        user.email = new_email
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profils veiksmīgi atjaunināts!",
+        "username": user.username,
+        "email": user.email
+    }), 200
