@@ -97,12 +97,13 @@ const MovieCatalog = () => {
             ) : (
                 <>
                     <button className="profile-button" onClick={() => navigate("/profile")}>Profils</button>
-                    <button className="logout-button" onClick={() => {
-                        localStorage.removeItem("token");
-                        localStorage.removeItem("role"); // 🔥 Удаляем роль при выходе
-                        setIsLoggedIn(false);
-                        navigate("/catalog");
-                    }}>Izrakstīties</button>
+<button className="logout-button" onClick={() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    setIsLoggedIn(false);
+    setUserRole(null); // ✅ СБРАСЫВАЕМ роль сразу
+    navigate("/catalog");
+}}>Izrakstīties</button>
                 </>
             )}
         </div>
