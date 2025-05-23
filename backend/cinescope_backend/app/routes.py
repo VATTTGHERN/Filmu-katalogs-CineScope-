@@ -1019,6 +1019,8 @@ def send_complaint():
 def resolve_complaint(complaint_id):
     try:
         action = request.args.get("action")  # "resolved" or "rejected"
+        comment = request.args.get("comment", "").strip()
+
         if action not in ["resolved", "rejected"]:
             return jsonify({"error": "Nepareiza darbība!"}), 400
 
@@ -1026,11 +1028,16 @@ def resolve_complaint(complaint_id):
         if not complaint:
             return jsonify({"error": "Sūdzība nav atrasta!"}), 404
 
-        # ❗️Удаляем жалобу полностью, независимо от действия
-        db.session.delete(complaint)
+        # ✅ Обновляем статус
+        complaint.status = "atrisināta" if action == "resolved" else "noraidīta"
+
+        # ✅ Сохраняем комментарий, если есть
+        if action == "rejected" and comment:
+            complaint.moderator_comment = comment
+
         db.session.commit()
 
-        return jsonify({"message": "Sūdzība veiksmīgi dzēsta!"}), 200
+        return jsonify({"message": "Sūdzība veiksmīgi apstrādāta!"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1095,3 +1102,43 @@ def update_profile():
         "username": user.username,
         "email": user.email
     }), 200
+
+@bp.route('/get-user-complaints', methods=['GET'])
+def get_user_complaints():
+    email = request.headers.get("User-Email")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts"}), 404
+
+    complaints = Complaint.query.filter_by(user_id=user.id).filter(
+        Complaint.status != "neatrisināta",
+        Complaint.is_dismissed_by_user == False  # ← добавлено условие
+    ).all()
+
+    result = []
+    for c in complaints:
+        result.append({
+    "id": c.id,
+    "subject": c.subject,
+    "text": c.text,
+    "status": c.status,
+    "comment": c.moderator_comment,
+    "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S")
+})
+    return jsonify({"complaints": result}), 200
+
+@bp.route('/dismiss-complaint/<int:complaint_id>', methods=['PUT'])
+def dismiss_complaint(complaint_id):
+    user_email = request.headers.get("User-Email")
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return jsonify({"error": "Lietotājs nav atrasts"}), 404
+
+    complaint = Complaint.query.get(complaint_id)
+    if not complaint or complaint.user_id != user.id:
+        return jsonify({"error": "Sūdzība nav atrasta vai nepieder jums"}), 403
+
+    complaint.is_dismissed_by_user = True
+    db.session.commit()
+
+    return jsonify({"message": "Sūdzība paslēpta no profila"}), 200
