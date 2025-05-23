@@ -5,6 +5,8 @@ import "../styles/Profile.css";
 const Profile = () => {
     const [profile, setProfile] = useState(null);
     const [userReviews, setUserReviews] = useState([]);
+    const [userComplaints, setUserComplaints] = useState([]);
+    const [dismissedComplaints, setDismissedComplaints] = useState([]);
     const [formData, setFormData] = useState({
         username: "",
         email: "",
@@ -26,23 +28,51 @@ const Profile = () => {
         setProfile({ username, email, role });
         setFormData({ ...formData, username, email });
         fetchUserReviews(email);
+        fetchUserComplaints(email);
     }, []);
 
     const fetchUserReviews = async (email) => {
         try {
             const response = await fetch("http://127.0.0.1:5000/get-user-reviews", {
-                headers: {
-                    "User-Email": email
-                }
+                headers: { "User-Email": email }
             });
             const data = await response.json();
-            if (response.ok) {
-                setUserReviews(data.reviews || []);
-            }
+            if (response.ok) setUserReviews(data.reviews || []);
         } catch (err) {
             console.error("Kļūda, ielādējot atsauksmes:", err);
         }
     };
+
+    const fetchUserComplaints = async (email) => {
+        try {
+            const response = await fetch("http://127.0.0.1:5000/get-user-complaints", {
+                headers: { "User-Email": email }
+            });
+            const data = await response.json();
+            if (response.ok) setUserComplaints(data.complaints || []);
+        } catch (err) {
+            console.error("Kļūda, ielādējot sūdzības:", err);
+        }
+    };
+
+    const handleDismissComplaint = async (complaintId, index) => {
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/dismiss-complaint/${complaintId}`, {
+            method: "PUT",
+            headers: {
+                "User-Email": localStorage.getItem("email")
+            }
+        });
+
+        if (response.ok) {
+            setDismissedComplaints([...dismissedComplaints, index]);
+        } else {
+            alert("Neizdevās paslēpt sūdzību.");
+        }
+    } catch (err) {
+        console.error("Kļūda, slēpjot sūdzību:", err);
+    }
+};
 
     const handleProfileChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -145,6 +175,30 @@ const Profile = () => {
                                 <small>{r.created_at}</small>
                                 <p>{r.text}</p>
                             </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="user-complaints">
+                <h3>Manas sūdzības (apstrādātas):</h3>
+                {userComplaints.length === 0 ? (
+                    <p>Nav atrisinātu sūdzību.</p>
+                ) : (
+                    <div className="complaint-cards">
+                        {userComplaints.map((c, i) => (
+                            !dismissedComplaints.includes(i) && (
+                                <div key={i} className="complaint-card">
+                                    <p><strong>Tēma:</strong> {c.subject}</p>
+                                    <p><strong>Apraksts:</strong> {c.text}</p>
+                                    <p><strong>Statuss:</strong> {c.status}</p>
+                                    {c.comment && (
+                                        <p><strong>Noraidījuma iemesls:</strong> {c.comment}</p>
+                                    )}
+                                    <small>{c.created_at}</small>
+                                    <button onClick={() => handleDismissComplaint(c.id, i)} className="dismiss-button">OK</button>
+                                </div>
+                            )
                         ))}
                     </div>
                 )}
