@@ -35,6 +35,8 @@ class Complaint(db.Model):
     status = db.Column(db.String(50), nullable=True, default="neatrisināta")  # ✅ Добавлено
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     review_id = db.Column(db.Integer, db.ForeignKey("review.id"), nullable=True)
+    moderator_comment = db.Column(db.Text, nullable=True)
+    is_dismissed_by_user = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f'<Complaint from {self.user_email} on {self.movie_id}>'
@@ -90,11 +92,11 @@ class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Добавляем связь с пользователем
-    text = db.Column(db.Text, nullable=True)  # ✅ Теперь поле может быть пустым
+    text = db.Column(db.Text, nullable=True) 
     rating = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
 
-    user = db.relationship("User", backref="reviews")  # Создаём отношение с пользователем
+    user = db.relationship("User", backref="reviews")
 
     def __repr__(self):
         return f'<Review {self.id} for Movie {self.movie_id} by User {self.user_id}>'
@@ -107,9 +109,9 @@ movie_actors = db.Table('movie_actors',
 
 class Actor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)  # Имя актёра
-    bio = db.Column(db.Text, nullable=True)  # Биография
-    birth_date = db.Column(db.Date, nullable=True)  # Дата рождения
+    name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    birth_date = db.Column(db.Date, nullable=True)
     death_date = db.Column(db.Date, nullable=True)
 
     def __repr__(self):
@@ -144,6 +146,5 @@ class FavoriteMovie(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     movie_id = db.Column(db.Integer, db.ForeignKey("movie.id"), nullable=False)
 
-    # Связь с пользователем и фильмом
     user = db.relationship("User", backref="favorites")
     movie = db.relationship("Movie", backref="favorited_by")
