@@ -1,4 +1,4 @@
-from app import db  # Убедимся, что импорт из app корректный
+from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
 
@@ -32,7 +32,7 @@ class Complaint(db.Model):
     movie_id = db.Column(db.Integer, db.ForeignKey("movie.id"), nullable=False)
     subject = db.Column(db.String(255), nullable=False)
     text = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(50), nullable=True, default="neatrisināta")  # ✅ Добавлено
+    status = db.Column(db.String(50), nullable=True, default="neatrisināta") 
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     review_id = db.Column(db.Integer, db.ForeignKey("review.id"), nullable=True)
     moderator_comment = db.Column(db.Text, nullable=True)
@@ -46,16 +46,15 @@ class Movie(db.Model):
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     release_date = db.Column(db.Date, nullable=True)
-    genres = db.Column(db.Text, nullable=True)  # Поле для жанра
+    genres = db.Column(db.Text, nullable=True)
     trailer_url = db.Column(db.String(255), nullable=True)
     poster_url = db.Column(db.String(500), nullable=True)
-    country = db.Column(db.String(50), nullable=True)  # Страна производства фильма
+    country = db.Column(db.String(50), nullable=True) 
 
-    # Новые поля
-    box_office = db.Column(db.String(100), nullable=True)  # Кассовые сборы
-    awards = db.Column(db.Text, nullable=True)  # Список наград (JSON-строка)
-    duration = db.Column(db.Integer, nullable=True)  # Длительность (минуты)
-    age_rating = db.Column(db.String(10), nullable=True)  # Возрастное ограничение
+    box_office = db.Column(db.String(100), nullable=True) 
+    awards = db.Column(db.Text, nullable=True) 
+    duration = db.Column(db.Integer, nullable=True) 
+    age_rating = db.Column(db.String(10), nullable=True)
 
     # Связь многие-ко-многим с актёрами
     actors = db.relationship('Actor', secondary='movie_actors', backref=db.backref('movies', lazy='dynamic'))
@@ -91,7 +90,7 @@ class Movie(db.Model):
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Добавляем связь с пользователем
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     text = db.Column(db.Text, nullable=True) 
     rating = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
