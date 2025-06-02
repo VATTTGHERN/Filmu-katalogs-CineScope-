@@ -12,7 +12,6 @@ from app.config import Config
 
 auth_bp = Blueprint("auth", __name__)
 
-# ✅ Регистрация пользователей
 @auth_bp.route('/register', methods=['POST'])
 def register_user():
     try:
@@ -24,7 +23,7 @@ def register_user():
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "Šis e-pasts jau ir reģistrēts!"}), 400
 
-        new_user = User(username=username, email=email, role="user")  # <=== Указываем роль "user"
+        new_user = User(username=username, email=email, role="user")
         new_user.set_password(password)
         
         db.session.add(new_user)
@@ -34,7 +33,6 @@ def register_user():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ✅ Авторизация пользователей
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
@@ -48,7 +46,7 @@ def login():
             return jsonify({"error": "Nepareizs e-pasts vai parole!"}), 401
 
         if user.is_blocked:
-            return jsonify({"error": "Jūsu konts ir bloķēts!"}), 403  # ❌ Блокируем вход
+            return jsonify({"error": "Jūsu konts ir bloķēts!"}), 403
 
         return jsonify({
             "message": "Veiksmīgi pieslēdzies!",
@@ -61,7 +59,6 @@ def login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ✅ Защищенный маршрут
 @auth_bp.route('/protected', methods=['GET'])
 @jwt_required()
 def protected():
@@ -73,7 +70,6 @@ def protected():
 
     return jsonify({"id": user.id, "username": user.username, "role": user.role}), 200
 
-# ✅ Декоратор для проверки роли
 def role_required(required_roles):
     def decorator(f):
         @wraps(f)
@@ -92,8 +88,6 @@ def role_required(required_roles):
         return decorated_function
     return decorator
 
-# ✅ Декоратор для администраторов
 admin_required = role_required(["admin"])
 
-# ✅ Декоратор для модераторов
 moderator_required = role_required(["admin", "moderator"])
