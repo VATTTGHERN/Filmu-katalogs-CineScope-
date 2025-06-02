@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request  # Добавлен импорт request для работы с данными из запроса
+from flask import Blueprint, jsonify, request 
 from app import db
 from app.models import User, Movie, Review, Actor, Director, Writer, MovieDirectors, MovieWriters, FavoriteMovie, Complaint
 from datetime import datetime
@@ -19,7 +19,7 @@ def home():
 @bp.route('/init-db')
 def init_db():
     try:
-        db.create_all()  # Создание таблиц в базе данных
+        db.create_all() 
         return jsonify({"message": "Tabulas ir veiksmīgi izveidotas!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -36,11 +36,11 @@ def check_tables():
 @bp.route('/force-init-db', methods=['GET'])
 def force_init_db():
     try:
-        from app.models import User, Movie, Review  # Убедимся, что модели импортированы
-        db.create_all()  # Принудительное создание таблиц
-        current_db = db.engine.url.database  # Получим текущую базу данных
+        from app.models import User, Movie, Review 
+        db.create_all() 
+        current_db = db.engine.url.database 
         inspector = db.inspect(db.engine)
-        tables = inspector.get_table_names()  # Проверим созданные таблицы
+        tables = inspector.get_table_names()
         return {
             "message": "Tabulas veiksmīgi izveidotas manuāli!",
             "database": current_db,
@@ -65,7 +65,7 @@ def add_user():
             return jsonify({"error": "Lietotājs ar šo e-pastu jau pastāv"}), 400
 
         new_user = User(username=username, email=email)
-        new_user.set_password(password)  # Хешируем пароль перед сохранением
+        new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
 
@@ -82,7 +82,7 @@ def get_users():
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
-                "is_blocked": user.is_blocked  # 💥 Это решает твою проблему!
+                "is_blocked": user.is_blocked 
             }
             for user in users
         ]
@@ -100,7 +100,6 @@ def add_movie():
 
         data = request.get_json()
 
-        # ✅ Получаем все поля из запроса
         title = (data.get("title") or "").strip()
         description = (data.get("description") or "").strip()
         release_date = (data.get("release_date") or "").strip()
@@ -123,7 +122,6 @@ def add_movie():
 
         genres_str = ", ".join(genres) if isinstance(genres, list) else genres
 
-        # ✅ Создаем фильм с сохранением всех полей
         new_movie = Movie(
             title=title,
             description=description,
@@ -156,7 +154,7 @@ def get_movies():
             "description": movie.description,
             "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
             "genres": movie.genres.split(", ") if movie.genres else [],
-            "poster_url": movie.poster_url  # <-- Добавляем постеры сюда
+            "poster_url": movie.poster_url 
         } for movie in movies]
 
         return jsonify({"movies": movie_list}), 200
@@ -265,7 +263,7 @@ def search_movies():
         "description": movie.description,
         "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
         "genres": movie.genres.split(", ") if movie.genres else [],
-        "poster_url": movie.poster_url  # ✅ Добавили постер
+        "poster_url": movie.poster_url 
     }
     for movie in movies
     ]
@@ -320,7 +318,7 @@ def add_review():
     if existing_review:
         return jsonify({"error": "Jūs jau esat atstājis atsauksmi par šo filmu!"}), 400
 
-    # Если рейтинг не задан, устанавливаем 0
+    # Ja vērtējums nav iestatīts, iestatiet uz 0
     review_rating = rating if rating is not None else 0
 
 # ✅ Ja ir teksts, pārbaudām to
@@ -333,7 +331,7 @@ def add_review():
     db.session.add(new_review)
     db.session.commit()
 
-    # Пересчитываем средний рейтинг
+    # Vidējā vērtējuma pārrēķināšana
     reviews = Review.query.filter_by(movie_id=movie_id).all()
     valid_ratings = [r.rating for r in reviews if r.rating]
     avg_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
@@ -359,7 +357,7 @@ def update_movie(movie_id):
         if not movie:
             return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # ✅ Обновляем основные данные фильма
+        # ✅ Filmas galveno datu atjaunināšana
         movie.title = data.get("title", movie.title)
         movie.description = data.get("description", movie.description)
         movie.release_date = datetime.strptime(data["release_date"], "%Y-%m-%d").date() if "release_date" in data else movie.release_date
@@ -381,17 +379,17 @@ def update_movie(movie_id):
 @bp.route('/delete-movie/<int:movie_id>', methods=['DELETE'])
 def delete_movie(movie_id):
     try:
-        # ✅ Проверяем, что это админ
+        # ✅ Pārbaudīsim, vai šis ir administrators.
         user_role = request.headers.get("User-Role")
         if user_role != "admin":
             return jsonify({"error": "Tikai administratoriem ir tiesības dzēst filmas!"}), 403
 
-        # ✅ Проверяем, существует ли фильм
+        # ✅ Pārbauda, ​​vai filma eksistē
         movie = Movie.query.get(movie_id)
         if not movie:
             return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # ✅ Удаляем фильм
+        # ✅ Dzēst filmu
         db.session.delete(movie)
         db.session.commit()
         return jsonify({"message": f"Filma '{movie.title}' veiksmīgi dzēsta!"}), 200
@@ -406,7 +404,7 @@ def add_actor():
         name = data.get('name')
         bio = data.get('bio')
         birth_date = data.get('birth_date')
-        death_date = data.get('death_date')  # Новое поле
+        death_date = data.get('death_date')
 
         if not name:
             return jsonify({"error": "Поле 'name' обязательно"}), 400
@@ -470,7 +468,7 @@ def get_actors_by_movie(movie_id):
                 "name": actor.name,
                 "bio": actor.bio,
                 "birth_date": str(actor.birth_date) if actor.birth_date else None,
-                "death_date": str(actor.death_date) if actor.death_date else None  # Добавляем дату смерти
+                "death_date": str(actor.death_date) if actor.death_date else None 
             }
             for actor in actors
         ]
@@ -509,7 +507,6 @@ def remove_actor_from_movie():
         if not movie or not actor:
             return jsonify({"error": "Фильм или актёр не найдены"}), 404
 
-        # Удаляем связь между фильмом и актёром
         if actor in movie.actors:
             movie.actors.remove(actor)
             db.session.commit()
@@ -519,7 +516,7 @@ def remove_actor_from_movie():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Добавить режиссёра
+# Pievienot režisoru
 @bp.route('/add-director', methods=['POST'])
 def add_director():
     try:
@@ -539,7 +536,7 @@ def add_director():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Добавить сценариста
+# Pievienot rakstnieku
 @bp.route('/add-writer', methods=['POST'])
 def add_writer():
     try:
@@ -559,7 +556,7 @@ def add_writer():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Добавить режиссёра к фильму
+# Pievienot režisoru filmai
 @bp.route('/add-director-to-movie', methods=['POST'])
 def add_director_to_movie():
     data = request.get_json()
@@ -568,7 +565,7 @@ def add_director_to_movie():
     db.session.commit()
     return jsonify({"message": "Режиссёр добавлен к фильму"}), 201
 
-# Добавить сценариста к фильму
+# Pievienojiet filmai scenāristu
 @bp.route('/add-writer-to-movie', methods=['POST'])
 def add_writer_to_movie():
     data = request.get_json()
@@ -577,7 +574,7 @@ def add_writer_to_movie():
     db.session.commit()
     return jsonify({"message": "Сценарист добавлен к фильму"}), 201
 
-# Получить режиссёров фильма
+# Iegūstiet filmas režisorus
 @bp.route('/get-directors-by-movie/<int:movie_id>', methods=['GET'])
 def get_directors_by_movie(movie_id):
     try:
@@ -598,7 +595,7 @@ def get_directors_by_movie(movie_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Получить сценаристов фильма
+# Iegūstiet filmu scenāristus
 @bp.route('/get-writers-by-movie/<int:movie_id>', methods=['GET'])
 def get_writers_by_movie(movie_id):
     try:
@@ -682,9 +679,9 @@ def delete_review(review_id):
 def add_to_favorites():
     data = request.get_json()
     movie_id = data.get("movie_id")
-    user_email = request.headers.get("User-Email")  # ✅ Логируем email
+    user_email = request.headers.get("User-Email") 
 
-    print(f"DEBUG: User-Email получен -> {user_email}")  # ✅ Добавляем лог
+    print(f"DEBUG: User-Email получен -> {user_email}") 
 
     if not user_email:
         return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
