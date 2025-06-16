@@ -2,26 +2,34 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../styles/EditMovie.css";
 
+# Filmu rediģēšanas iespējas
 const EditMovie = () => {
-    const { id } = useParams();
+    const { id } = useParams(); // Filmas ID tiek iegūts no URL
     const navigate = useNavigate();
-    const [movie, setMovie] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+
+    const [movie, setMovie] = useState(null); // Filmas dati
+    const [loading, setLoading] = useState(true); // Ielādes indikators
+    const [error, setError] = useState(""); // Kļūdas ziņojums
+    const [updateSuccess, setUpdateSuccess] = useState(false); // Vai filma ir veiksmīgi atjaunināta
 
     useEffect(() => {
-        fetch(`http://127.0.0.1:5000/get-movie/${id}`)
+        fetch(`http://127.0.0.1:5000/get-movie/${id}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
+            }
+        })
             .then((res) => res.json())
             .then((data) => {
                 if (data.title) {
-                    setMovie(data);
+                    setMovie(data); // Iestatīt filmas informāciju, ja dati saņemti veiksmīgi
                 } else {
-                    setError("Filma nav atrasta");
+                    setError("Filma nav atrasta"); // Ja dati nav atrasti
                 }
                 setLoading(false);
             })
-            .catch((err) => {
-                setError("Nevar ielādēt filmas datus!");
+            .catch(() => {
+                setError("Nevar ielādēt filmas datus!"); // Tīkla vai servera kļūda
                 setLoading(false);
             });
     }, [id]);
@@ -29,25 +37,34 @@ const EditMovie = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Apstrādāt datus korektā formātā pirms nosūtīšanas uz serveri
         const updatedMovie = {
             title: movie.title,
             description: movie.description,
             release_date: movie.release_date,
-            genres: movie.genres,
+            genres: typeof movie.genres === "string"
+                ? movie.genres.split(",").map(g => g.trim())
+                : movie.genres,
             poster_url: movie.poster_url,
             trailer_url: movie.trailer_url,
             country: movie.country,
             box_office: movie.box_office,
-            awards: movie.awards,
-            duration: movie.duration,
+            awards: typeof movie.awards === "string"
+                ? movie.awards.split(";").map(a => a.trim())
+                : movie.awards,
+            duration: movie.duration ? parseInt(movie.duration) : null,
             age_rating: movie.age_rating
+            actors: movie.actors,
+            directors: movie.directors,
+            writers: movie.writers
         };
 
         try {
             const response = await fetch(`http://127.0.0.1:5000/update-movie/${id}`, {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("token")}` // JWT token autentifikācijai
                 },
                 body: JSON.stringify(updatedMovie)
             });
@@ -55,18 +72,18 @@ const EditMovie = () => {
             const data = await response.json();
 
             if (response.ok) {
-                alert("Filma veiksmīgi atjaunināta!");
-                navigate(`/movie/${id}`);
+                setUpdateSuccess(true); // Rāda veiksmīgas atjaunināšanas paziņojumu
             } else {
-                alert(`Kļūda: ${data.error}`);
+                alert(`Kļūda: ${data.error || "Neizdevās atjaunināt filmu!"}`); // Validācijas kļūda no servera
             }
         } catch (err) {
-            alert("Neizdevās atjaunināt filmu!");
+            alert("Neizdevās atjaunināt filmu!"); // Kļūda, nosūtot pieprasījumu
         }
     };
 
-    if (loading) return <p>Ielādēšana...</p>;
-    if (error) return <p>{error}</p>;
+    if (loading) return <p>Ielādēšana...</p>; // Ja dati vēl tiek ielādēti
+    if (error) return <p>{error}</p>; // Ja ir kļūda ielādes laikā
+};
 
     return (
         <div className="edit-movie-container">
