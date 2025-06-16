@@ -2,37 +2,50 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/MovieCatalog.css";
 
+// Galvenā filmas kataloga komponente
 const MovieCatalog = () => {
-    const [movies, setMovies] = useState([]);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [genre, setGenre] = useState("");
-    const [genres, setGenres] = useState([]);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userRole, setUserRole] = useState(null);
+    // Stāvokļa mainīgie (React state)
+    const [movies, setMovies] = useState([]);               // Saglabā ielādētās filmas
+    const [searchTerm, setSearchTerm] = useState("");       // Meklēšanas atslēgvārds
+    const [genre, setGenre] = useState("");                 // Izvēlētais žanrs
+    const [genres, setGenres] = useState([]);               // Pieejamie žanri
+    const [isLoggedIn, setIsLoggedIn] = useState(false);    // Lietotāja pieteikšanās statuss
+    const [userRole, setUserRole] = useState(null);         // Lietotāja loma (lietotājs, moderators, admins)
+
     const navigate = useNavigate();
-    
+
+    // Pēc komponentes ielādes izsauc filmas un žanru datus
     useEffect(() => {
         fetchMovies();
         fetchGenres();
 
+        // Pārbauda, vai ir saglabāts JWT tokens
         const token = localStorage.getItem("token");
         setIsLoggedIn(!!token);
 
+        // Iegūst lietotāja lomu no localStorage
         const role = localStorage.getItem("role");
         setUserRole(role);
     }, []);
-    
+
+    // Ielādē visas filmas vai pēc vaicājuma (meklēšanas/filtra)
     const fetchMovies = (query = "") => {
         let url = "http://127.0.0.1:5000/get-movies";
         if (query) {
             url = `http://127.0.0.1:5000/search-movies?${query}`;
         }
+
         fetch(url)
             .then((response) => response.json())
-            .then((data) => setMovies(data.movies || []))
-            .catch((error) => console.error("Kļūda filmas ielādē:", error));
+            .then((data) => {
+                setMovies(data.movies || []);
+            })
+            .catch((error) => {
+                console.error("Kļūda filmas ielādē:", error);
+            });
     };
-    
+
+    // Ielādē visus žanrus no filmām
     const fetchGenres = () => {
         fetch("http://127.0.0.1:5000/get-movies")
             .then((response) => response.json())
@@ -41,27 +54,30 @@ const MovieCatalog = () => {
                 data.movies.forEach(movie => {
                     movie.genres.forEach(genre => allGenres.add(genre));
                 });
-                setGenres([...allGenres]);
+                setGenres([...allGenres]); // Konvertē uz masīvu
             })
-            .catch((error) => console.error("Kļūda žanru ielādē:", error));
+            .catch((error) => {
+                console.error("Kļūda žanru ielādē:", error);
+            });
     };
-    
+
+    // Apstrādā meklēšanas un žanru filtra iesniegšanu
     const handleSearch = () => {
         let query = "";
         if (searchTerm) query += `title=${searchTerm}&`;
         if (genre) query += `genre=${genre}&`;
         fetchMovies(query);
     };
-    
+
+    // Atiestata filtrus un ielādē visas filmas
     const resetFilters = () => {
         setSearchTerm("");
         setGenre("");
         fetchMovies();
     };
-
+};
     return (
         <div className="catalog-container">
-    {/* 🔥 Новый Header с заголовком */}
     <h2 className="catalog-title">Filmu katalogs "CineScope"</h2>
 
     <div className="top-navigation">
@@ -80,7 +96,6 @@ const MovieCatalog = () => {
     </button>
 )}
 
-        {/* 🔥 Кнопки для администратора */}
         {localStorage.getItem("role") === "admin" && (
     <div className="admin-buttons">
         <button onClick={() => navigate("/add-movie")} className="admin-button fixed-button">Pievienot filmu</button>
@@ -101,7 +116,7 @@ const MovieCatalog = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     setIsLoggedIn(false);
-    setUserRole(null); // ✅ СБРАСЫВАЕМ роль сразу
+    setUserRole(null);
     navigate("/catalog");
 }}>Izrakstīties</button>
                 </>
