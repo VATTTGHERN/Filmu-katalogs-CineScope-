@@ -5,34 +5,33 @@ import { useTranslation } from 'react-i18next';
 
 const MovieDetails = () => {
     const { id } = useParams();
-    const navigate = useNavigate(); // Добавили useNavigate
-    const [movie, setMovie] = useState(null);
-    const [error, setError] = useState(null);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [rating, setRating] = useState(0); // Хранит оценку (1-5 звезд)
-    const [reviewText, setReviewText] = useState(""); // Хранит текст отзыва
-    const [reviews, setReviews] = useState([]); // Хранит список отзывов
-    const [isFavorite, setIsFavorite] = useState(false); // 🔥 Статус избранного
-    const currentUser = localStorage.getItem("user_email"); // Получаем email текущего пользователя
-    const [editingReview, setEditingReview] = useState(null);
-    const [editText, setEditText] = useState("");
-    const [editRating, setEditRating] = useState(0);
-    const [isComplaintOpen, setIsComplaintOpen] = useState(false); // Флаг отображения формы жалобы
-    const [complaintSubject, setComplaintSubject] = useState(""); // Тема жалобы
-    const [complaintText, setComplaintText] = useState(""); // Текст жалобы
-    const [reviewError, setReviewError] = useState("");
-    const [reviewSuccess, setReviewSuccess] = useState("");
-    const [reviewMessage, setReviewMessage] = useState("");
-    const [reviewMessageError, setReviewMessageError] = useState("");
-    const [globalMessage, setGlobalMessage] = useState("");
-    const [globalMessageType, setGlobalMessageType] = useState(""); // 'success' или 'error'
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-    const { t, i18n } = useTranslation();
-    const [selectedReviewId, setSelectedReviewId] = useState(null);
+    const navigate = useNavigate();  // Navigācijai starp lapām
+    const [movie, setMovie] = useState(null);  // Filmas objekts
+    const [error, setError] = useState(null);  // Kļūdas ziņojums
+    const [isLoggedIn, setIsLoggedIn] = useState(false);  // Pieslēgšanās statuss
+    const [rating, setRating] = useState(0);  // Atsauksmes vērtējums (1–5 zvaigznes)
+    const [reviewText, setReviewText] = useState("");  // Atsauksmes teksts
+    const [reviews, setReviews] = useState([]);  // Atsauksmju saraksts
+    const [isFavorite, setIsFavorite] = useState(false);  // Vai filma ir favorītos
+    const currentUser = localStorage.getItem("user_email");  // Lietotāja e-pasts
+    const [editingReview, setEditingReview] = useState(null);  // Atsauksme rediģēšanai
+    const [editText, setEditText] = useState("");  // Rediģētais teksts
+    const [editRating, setEditRating] = useState(0);  // Rediģētais vērtējums
+    const [isComplaintOpen, setIsComplaintOpen] = useState(false);  // Vai atvērta sūdzības forma
+    const [complaintSubject, setComplaintSubject] = useState("");  // Sūdzības tēma
+    const [complaintText, setComplaintText] = useState("");  // Sūdzības saturs
+    const [reviewError, setReviewError] = useState("");  // Atsauksmes kļūda
+    const [reviewSuccess, setReviewSuccess] = useState("");  // Atsauksmes panākumu ziņa
+    const [reviewMessage, setReviewMessage] = useState("");  // Atsauksmes statusa paziņojums
+    const [reviewMessageError, setReviewMessageError] = useState("");  // Atsauksmes kļūda
+    const [globalMessage, setGlobalMessage] = useState("");  // Globāls paziņojums visai lapai
+    const [globalMessageType, setGlobalMessageType] = useState("");  // 'success' vai 'error'
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);  // Atsauksmes ID dzēšanai
+    const [selectedReviewId, setSelectedReviewId] = useState(null);  // Atlasītās atsauksmes ID
 
     useEffect(() => {
-        const backendUrl = "http://127.0.0.1:5000/";
-    
+        const backendUrl = "http://127.0.0.1:5000";
+
         fetch(`${backendUrl}/get-movie/${id}`)
             .then((response) => {
                 if (!response.ok) {
@@ -42,14 +41,13 @@ const MovieDetails = () => {
             })
             .then((data) => {
                 console.log("Filmas dati (pilns JSON):", JSON.stringify(data, null, 2));
-    
                 if (data.movie) {
                     setMovie(data.movie);
                     setReviews(data.movie.reviews || []);
-                    checkIfFavorite(); // 🔥 Проверяем, есть ли фильм в избранном
+                    checkIfFavorite();
                 } else if (data.title) {
                     setMovie(data);
-                    checkIfFavorite(); // 🔥 Проверяем, если фильм найден
+                    checkIfFavorite();
                 } else {
                     setError("Filma nav atrasta");
                 }
@@ -58,285 +56,134 @@ const MovieDetails = () => {
                 console.error("Filmas ielādes kļūda:", error);
                 setError("Filmas ielādes kļūda");
             });
-    
-        // Проверяем, есть ли токен пользователя
+
         const token = localStorage.getItem("token");
         setIsLoggedIn(!!token);
     }, [id]);
-    
-    // ✅ Функция для проверки, добавлен ли фильм в избранное
+
+    // Pārbauda vai filma jau ir pievienota favorītiem
     const checkIfFavorite = async () => {
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch("http://127.0.0.1:5000/favorites", {
-                headers: { "User-Email": localStorage.getItem("email") } // 🔥 Передаем email пользователя
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
             });
-    
+
             const data = await response.json();
             if (data.favorites) {
                 setIsFavorite(data.favorites.some(fav => fav.id === parseInt(id)));
             }
         } catch (error) {
-            console.error("Kļūda, pārbaudot favorītus!");
+            console.error("Kļūda, pārbaudot favorītus:", error);
         }
     };
 
-    // ✅ Функция для обновления фильма и отзывов
-const fetchMovie = async () => {
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/get-movie/${id}`);
-        const data = await response.json();
+    // Ielādē filmas datus kopā ar atsauksmēm
+    const fetchMovie = async () => {
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/get-movie/${id}`);
+            const data = await response.json();
 
-        if (data.movie) {
-            setMovie(data.movie);
-            setReviews(data.movie.reviews || []);
-        } else {
-            setMovie(data);
-            setReviews(data.reviews || []);
+            if (data.movie) {
+                setMovie(data.movie);
+                setReviews(data.movie.reviews || []);
+            } else {
+                setMovie(data);
+                setReviews(data.reviews || []);
+            }
+        } catch (err) {
+            console.error("Kļūda, ielādējot filmas datus:", err);
+            setError("Filmas ielādes kļūda");
         }
-    } catch (err) {
-        console.error("Kļūda, ielādējot filmas datus:", err);
-        setError("Filmas ielādes kļūda");
-    }
-};
+    };
 
-
+    // Pievieno filmu favorītiem
     const handleAddToFavorites = async () => {
         if (!isLoggedIn) {
-            alert("Jums jāpiesakās, lai pievienotu filmu!");
+            setGlobalMessage("Lai pievienotu filmu, nepieciešams pieslēgties");
+            setGlobalMessageType("error");
+            setTimeout(() => setGlobalMessage(""), 4000);
             return;
         }
-    
-        const response = await fetch("http://127.0.0.1:5000/add-to-favorites", {
+
+        try {
+            const token = localStorage.getItem("token");
+            const response = await fetch("http://127.0.0.1:5000/add-to-favorites", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ movie_id: id })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setIsFavorite(true);
+                setGlobalMessage("Filma pievienota vēlmju sarakstam!");
+                setGlobalMessageType("success");
+            } else {
+                setGlobalMessage(data.error || "Kļūda, pievienojot filmu!");
+                setGlobalMessageType("error");
+            }
+        } catch (error) {
+            console.error("Kļūda, pievienojot filmu favorītiem:", error);
+            setGlobalMessage("Neizdevās savienoties ar serveri");
+            setGlobalMessageType("error");
+        }
+
+        // Attīra globālo ziņu pēc 4 sekundēm
+        setTimeout(() => setGlobalMessage(""), 4000);
+    };
+
+// Iesniedz atsauksmi par filmu
+const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem("token");
+    if (!isLoggedIn || !token) return;
+
+    if (!rating && !reviewText.trim()) {
+        setReviewError("Jābūt vismaz vērtējumam vai tekstam!");
+        setTimeout(() => setReviewError(""), 4000);
+        return;
+    }
+
+    const reviewData = {
+        movie_id: parseInt(id),
+        rating: rating || null,
+        text: reviewText.trim() || null
+    };
+
+    try {
+        const response = await fetch("http://127.0.0.1:5000/add-review", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "User-Email": localStorage.getItem("email") // ✅ Передаем email
+                "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ movie_id: id })
+            body: JSON.stringify(reviewData)
         });
-        
+
         const data = await response.json();
-        if (response.ok) {
-            setIsFavorite(true);
-            setGlobalMessage("Filma pievienota vēlmju sarakstam!");
-            setGlobalMessageType("success");
-            setTimeout(() => setGlobalMessage(""), 4000);
-        } else {
-            setGlobalMessage(data.error || "Kļūda, pievienojot filmu!");
-            setGlobalMessageType("error");
-            setTimeout(() => setGlobalMessage(""), 4000);
-        }
-    };
+        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
 
-    const handleRemoveFromFavorites = async () => {
-        const response = await fetch("http://127.0.0.1:5000/remove-from-favorites", {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ movie_id: id })
-        });
-    
-        const data = await response.json();
-        if (response.ok) {
-            setIsFavorite(false);
-            alert("Filma veiksmīgi izņemta no favorītiem!");
-        } else {
-            alert(data.error || "Kļūda, izņemot filmu!");
-        }
-    };
-    
-
-    if (error) {
-        return <h2>{error}</h2>;
+        await fetchMovie(); // Atjauno atsauksmju sarakstu
+        setRating(0);
+        setReviewText("");
+        setReviewSuccess(t("success"));
+        setTimeout(() => setReviewSuccess(""), 4000);
+    } catch (err) {
+        setReviewMessageError("Kļūda, pievienojot atsauksmi: " + err.message);
+        setTimeout(() => setReviewMessageError(""), 5000);
     }
-
-    if (!movie) {
-        return <h2>Ielādēšana...</h2>;
-    }
-
-    const handleReviewSubmit = async (e) => {
-        e.preventDefault();
-    
-        if (!isLoggedIn) return;
-    
-        const userEmail = localStorage.getItem("email");
-        if (!userEmail) return;
-    
-        if (!rating && !reviewText.trim()) {
-            setReviewError("Jābūt vismaz vērtējumam vai tekstam!");
-            setTimeout(() => setReviewError(""), 4000);
-            return;
-        }
-    
-        const reviewData = {
-            movie_id: parseInt(id),
-            rating: rating || null,
-            text: reviewText.trim() || null
-        };
-    
-        try {
-            const response = await fetch("http://127.0.0.1:5000/add-review", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "User-Email": userEmail
-                },
-                body: JSON.stringify(reviewData)
-            });
-    
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
-    
-            await fetchMovie(); // ✅ обновляем отзывы и рейтинг
-            setRating(0);
-            setReviewText("");
-            setReviewSuccess(t("success"));
-            setTimeout(() => setReviewSuccess(""), 4000);
-        } catch (err) {
-            setReviewMessageError("Kļūda, pievienojot atsauksmi: " + err.message);
-            setTimeout(() => setReviewMessageError(""), 5000);
-        }
-    };    
-    
-    const handleDelete = async (movieId) => {
-        const confirmDelete = window.confirm("Vai tiešām vēlaties dzēst šo filmu?");
-        if (!confirmDelete) return;
-    
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/delete-movie/${movieId}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                    "User-Role": localStorage.getItem("role"), // ✅ Передаем роль пользователя
-                },
-            });
-    
-            const data = await response.json();
-            if (response.ok) {
-                setGlobalMessage(data.message);
-                setGlobalMessageType("success");
-                setTimeout(() => {
-                    setGlobalMessage("");
-                    navigate("/catalog");
-            }, 4000);
-                navigate("/catalog");
-            } else {
-                alert(`Kļūda: ${data.error}`);
-            }
-        } catch (err) {
-            alert("Neizdevās dzēst filmu!");
-        }
-    };
-
-    const handleEditReview = async (reviewId) => {
-        const userEmail = localStorage.getItem("email");
-    
-        const updatedReview = {
-    text: editText.trim(),
-    rating: Number.isInteger(editRating) ? editRating : 0
 };
-    
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/edit-review/${reviewId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "User-Email": userEmail
-                },
-                body: JSON.stringify(updatedReview)
-            });
-    
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
-    
-            await fetchMovie(); // обновляем отзывы
-            setReviewMessage("Atsauksme veiksmīgi rediģēta!");
-            setTimeout(() => setReviewMessage(""), 4000);
-            setEditingReview(null);
-        } catch (err) {
-            setReviewMessageError("Kļūda, rediģējot atsauksmi: " + err.message);
-            setTimeout(() => setReviewMessageError(""), 5000);
-        }
-    };    
-
-    const handleSubmitComplaint = async (e) => {
-        e.preventDefault();
-    
-        const email = localStorage.getItem("email");
-        if (!email) {
-            alert("Nepieciešams lietotāja e-pasts! Lūdzu, piesakieties.");
-            return;
-        }
-    
-        if (!complaintSubject.trim() || !complaintText.trim()) {
-            alert("Lūdzu, aizpildiet abus laukus: tēmu un tekstu!");
-            return;
-        }
-    
-        try {
-            const response = await fetch("/send-complaint", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "User-Email": email  // ✅ Отправляем корректный email
-                },
-                body: JSON.stringify({
-                    movie_id: parseInt(id),  // ✅ Убедились, что `movie_id` - число
-                    subject: complaintSubject.trim(),
-                    text: complaintText.trim(),
-                    review_id: selectedReviewId  // ✅ если null, значит sūdzība par filmu
-                })
-            });
-    
-            const data = await response.json();
-    
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
-    
-            setGlobalMessage("Sūdzība veiksmīgi nosūtīta!");
-            setGlobalMessageType("success");
-            setTimeout(() => setGlobalMessage(""), 4000);
-            setIsComplaintOpen(false);
-            setComplaintSubject("");
-            setComplaintText("");
-            setSelectedReviewId(null);
-        } catch (error) {
-            console.error("Kļūda, nosūtot sūdzību:", error);
-            setGlobalMessage("Neizdevās nosūtīt sūdzību: " + error.message);
-            setGlobalMessageType("error");
-            setTimeout(() => setGlobalMessage(""), 4000);
-        }
-    };
-    
-    const handleDeleteReview = async (reviewId) => {
-        const userEmail = localStorage.getItem("email");
-    
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                    "User-Email": userEmail
-                }
-            });
-    
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
-    
-            setReviewMessage("Atsauksme veiksmīgi dzēsta!");
-            setTimeout(() => setReviewMessage(""), 4000);
-            setConfirmDeleteId(null); // скрываем подтверждение
-            await fetchMovie();
-        } catch (err) {
-            setReviewMessageError("Kļūda, dzēšot atsauksmi: " + err.message);
-            setTimeout(() => setReviewMessageError(""), 5000);
-        }
-    };
-       
-    
     return (
         <div className="movie-details-container">
-            {/* Верхняя навигация */}
+            {/* Augšējā navigācija */}
 <div className="top-navigation">
     <div className="left-navigation">
         <button className="back-button" onClick={() => navigate("/catalog")}>
@@ -421,7 +268,7 @@ const fetchMovie = async () => {
     </div>
 )}
 
-{/* Трейлер */}
+{/* Filmas treileris */}
 {movie.trailer_url && (
                 <div className="trailer-container">
                     <h3>Filmas treileris:</h3>
@@ -547,7 +394,7 @@ const fetchMovie = async () => {
             </small>
             <p>{review.text}</p>
 
-            {/* Кнопка для подачи sūdzības на atsauksmi */}
+            {/* Poga sūdzību iesniegšanai par atsauksmi*/}
             {isLoggedIn && localStorage.getItem("email") !== review.user_email && review.text && (
                 <button
                     className="complaint-button"
@@ -582,7 +429,7 @@ const fetchMovie = async () => {
               </div>
             )}
 
-            {/* Кнопки "Редaktēt" и "Dzēst" для автора */}
+            {/* Autora pogas "Rediģēt" un "Dzēst" */}
             {isLoggedIn && localStorage.getItem("email") === review.user_email && (
                 <div className="review-actions">
                     <button 
@@ -609,7 +456,7 @@ const fetchMovie = async () => {
                 </div>
             )}
 
-            {/* Кнопка удаления atsauksmes для модератора/админа */}
+            {/* Atsauksmes dzēšanas poga moderatoram/adminam */}
             {isLoggedIn &&
                 (localStorage.getItem("role") === "moderator" || localStorage.getItem("role") === "admin") &&
                 localStorage.getItem("email") !== review.user_email && (
