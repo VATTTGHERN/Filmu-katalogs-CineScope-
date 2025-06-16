@@ -1,16 +1,35 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/Register.css"; // Подключаем отдельный CSS файл для Register
+import "../styles/Register.css"; 
 
+// Lietotāja reģistrācija
 const Register = () => {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [errors, setErrors] = useState({});
     const [error, setError] = useState("");
+
     const navigate = useNavigate();
 
+    // Reģistrācijas formas apstrāde
     const handleRegister = async (e) => {
         e.preventDefault();
+
+        // Validācijas kļūdu objekts
+        const newErrors = {};
+
+        // Pamata validācija — pārbauda tukšos laukus
+        if (!username.trim()) newErrors.username = "Lūdzu, ievadiet lietotājvārdu!";
+        if (!email.trim()) newErrors.email = "Lūdzu, ievadiet e-pastu!";
+        if (!password.trim()) newErrors.password = "Lūdzu, ievadiet paroli!";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        setErrors({});
         setError("");
 
         try {
@@ -21,12 +40,16 @@ const Register = () => {
             });
 
             const data = await response.json();
+
             if (!response.ok) {
+                // Ja serveris atgriež kļūdu, tad to izmetam
                 throw new Error(data.error || "Nezināma kļūda");
             }
 
+            // Ja reģistrācija veiksmīga — novirza uz login lapu
             navigate("/login");
         } catch (err) {
+            // Parāda kļūdu, kas radusies reģistrācijas laikā
             setError(err.message);
         }
     };
