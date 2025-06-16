@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Убедись, что useNavigate импортирован
+import { useParams, useNavigate } from "react-router-dom";
 import "../styles/MovieDetails.css";
 import { useTranslation } from 'react-i18next';
 
