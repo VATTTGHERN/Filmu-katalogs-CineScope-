@@ -1,44 +1,49 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/MovieCatalog.css"; // Используем те же стили, что и для каталога
+import "../styles/MovieCatalog.css"; //Izmantojam tos pašus stilus kā katalogam.
 
 const FavoriteMovies = () => {
-    const [favorites, setFavorites] = useState([]);
+    const [favorites, setFavorites] = useState([]); // Lietotāja favorītfilmas
     const navigate = useNavigate();
-    const [message, setMessage] = useState("");
-    const [messageType, setMessageType] = useState(""); // "success" или "error"
-
+    const [message, setMessage] = useState(""); // Ziņojums par darbību rezultātu
+    const [messageType, setMessageType] = useState(""); // Ziņojuma tips: "success" vai "error"
 
     useEffect(() => {
         fetch("http://127.0.0.1:5000/favorites", {
-            headers: { "User-Email": localStorage.getItem("email") }
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
+            }
         })
         .then((response) => response.json())
         .then((data) => {
-            if (data.favorites && Array.isArray(data.favorites)) { 
-                setFavorites(data.favorites);
+            if (data.favorites && Array.isArray(data.favorites)) {
+                setFavorites(data.favorites); // Ielādējam favorītfilmas
             } else {
-                setFavorites([]);
+                setFavorites([]); // Ja nav atrastas
             }
         })
         .catch(() => {
-            alert("Kļūda, ielādējot favorītus!");
-            setFavorites([]);
+            setMessage("Kļūda, ielādējot favorītus!");
+            setMessageType("error");
         });
     }, []);
 
     const handleRemoveFromFavorites = async (movieId) => {
+        // Pieprasījums, lai noņemtu filmu no favorītiem ar JWT autentifikāciju
         const response = await fetch("http://127.0.0.1:5000/remove-from-favorites", {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
-                "User-Email": localStorage.getItem("email")
+                Authorization: `Bearer ${localStorage.getItem("token")}`
             },
-            body: JSON.stringify({ movie_id: movieId })
+            body: JSON.stringify({ movie_id: movieId }) // Nosūtām filmas ID
         });
-    
+
         const data = await response.json();
+
         if (response.ok) {
+            // Atjauninām stāvokli, izņemot attiecīgo filmu no saraksta
             setFavorites(favorites.filter(movie => movie.id !== movieId));
             setMessage("Filma veiksmīgi izņemta no favorītiem!");
             setMessageType("success");
@@ -46,7 +51,8 @@ const FavoriteMovies = () => {
             setMessage(data.error || "Kļūda, izņemot filmu!");
             setMessageType("error");
         }
-    
+
+        // Ziņojums pazūd pēc 4 sekundēm
         setTimeout(() => {
             setMessage("");
             setMessageType("");
