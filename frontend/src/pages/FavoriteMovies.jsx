@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/MovieCatalog.css"; //Izmantojam tos pašus stilus kā katalogam.
 
+// Favoritu saraksts
 const FavoriteMovies = () => {
     const [favorites, setFavorites] = useState([]); // Lietotāja favorītfilmas
     const navigate = useNavigate();
