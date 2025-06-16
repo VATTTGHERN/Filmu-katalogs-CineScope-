@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/LatvianMovies.css";
 
+// Komponents kas rāda un filtrē latviešu filmas ar iespēju meklēt un atlasīt pēc žanra.
 const LatvianMovies = () => {
     const [movies, setMovies] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -19,29 +20,31 @@ const LatvianMovies = () => {
 
     const fetchLatvianMovies = (query = "") => {
         let url = `http://127.0.0.1:5000/get-latvian-movies?${query}`;
-        console.log("API Request URL:", url);  // 👈 Лог запроса
+        console.log("API Request URL:", url);  // Pieprasījuma URL logā
         
         fetch(url)
             .then((response) => response.json())
             .then((data) => {
-                console.log("Полученные данные:", data);  // 👈 Лог ответа
+                console.log("Saņemtie dati:", data);  // Atbildes dati logā
                 setMovies(data.movies || []);
             })
             .catch((error) => console.error("Kļūda latviešu filmu ielādē:", error));
     };
-    
+
     const [sortBy, setSortBy] = useState("");
 
+    // Apstrādā meklēšanu pēc nosaukuma un žanra
     const handleSearch = () => {
         let queryParams = [];
         if (searchTerm) queryParams.push(`title=${searchTerm}`);
         if (genre) queryParams.push(`genre=${genre}`);
     
-        let query = queryParams.join("&");  // Объединяем параметры через `&`
+        let query = queryParams.join("&");  // Apvieno parametrus ar “&”
         
         fetchLatvianMovies(query);
     };    
 
+    // Ielādē pieejamos žanrus no filmām
     const fetchGenres = () => {
         fetch("http://127.0.0.1:5000/get-latvian-movies")
             .then((response) => response.json())
@@ -57,12 +60,13 @@ const LatvianMovies = () => {
             .catch((error) => console.error("Kļūda žanru ielādē:", error));
     };      
 
+    // Atiestata meklēšanas filtrus un atkārtoti ielādē visas filmas
     const resetFilters = () => {
         setSearchTerm("");
         setGenre("");
         fetchLatvianMovies();
     };
-
+    
     return (
         <div className="latvian-movies-container">
             <div className="latvian-header">
