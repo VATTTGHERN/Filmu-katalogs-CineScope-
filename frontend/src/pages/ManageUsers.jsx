@@ -3,50 +3,74 @@ import { useNavigate } from "react-router-dom";
 import "../styles/ManageUsers.css";
 
 const ManageUsers = () => {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState(null);
-    const navigate = useNavigate();
+  // Saglabājam lietotāju sarakstu
+  const [users, setUsers] = useState([]);
+  // Lai rādītu ielādes spinneri vai ziņojumu
+  const [loading, setLoading] = useState(true);
+  // Paziņojumi par veiksmīgām vai neveiksmīgām darbībām
+  const [message, setMessage] = useState(null);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-    const fetchUsers = async () => {
-        try {
-            const response = await fetch("http://127.0.0.1:5000/get-users");
-            const data = await response.json();
-            setUsers(data.users || []);
-        } catch (error) {
-            console.error("Kļūda lietotāju ielādē:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  // Funkcija, kas ielādē visus lietotājus no backend
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token") || "";
 
-    const toggleBlockUser = async (userId) => {
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/toggle-block-user/${userId}`, {
-                method: "PUT",
-                headers: { "User-Role": localStorage.getItem("role") }
-            });
+      const response = await fetch("http://127.0.0.1:5000/get-users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-            const data = await response.json();
-            setMessage(data.message);
+      const data = await response.json();
 
-            // Обновляем статус блокировки в UI
-            setUsers(prev =>
-                prev.map(user =>
-                    user.id === userId ? { ...user, is_blocked: !user.is_blocked } : user
-                )
-            );
+      if (!response.ok) throw new Error(data.error || "Neizdevās ielādēt lietotājus");
 
-            setTimeout(() => setMessage(null), 3000);
-        } catch (error) {
-            setMessage("Neizdevās mainīt lietotāja statusu.");
-            setTimeout(() => setMessage(null), 3000);
-        }
-    };
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("Kļūda lietotāju ielādē:", error);
+      setMessage("Neizdevās ielādēt lietotājus");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funkcija, kas bloķē vai atbloķē lietotāju
+  const toggleBlockUser = async (userId) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+
+      const response = await fetch(`http://127.0.0.1:5000/toggle-block-user/${userId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Neizdevās mainīt lietotāja statusu.");
+
+      setMessage(data.message);
+
+      // Atjaunojam lietotāja bloķēšanas statusu, lai UI atsvaidzinātos bez pilnas pārlādes
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, is_blocked: !user.is_blocked } : user
+        )
+      );
+
+      // Notīrām paziņojumu pēc 3 sekundēm
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      setMessage("Neizdevās mainīt lietotāja statusu.");
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
 
     return (
         <div className="manage-users-container">
