@@ -181,6 +181,145 @@ const handleReviewSubmit = async (e) => {
         setTimeout(() => setReviewMessageError(""), 5000);
     }
 };
+
+// Dzēš filmu
+const handleDelete = async (movieId) => {
+    const confirmDelete = window.confirm("Vai tiešām vēlaties dzēst šo filmu?");
+    if (!confirmDelete) return;
+
+    const token = localStorage.getItem("token");
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/delete-movie/${movieId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // JWT nodrošina piekļuvi pēc lomas
+            },
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            setGlobalMessage(data.message);
+            setGlobalMessageType("success");
+            setTimeout(() => {
+                setGlobalMessage("");
+                navigate("/catalog");
+            }, 4000);
+        } else {
+            alert(`Kļūda: ${data.error}`);
+        }
+    } catch (err) {
+        alert("Neizdevās dzēst filmu!");
+    }
+};
+
+// Rediģē esošu atsauksmi
+const handleEditReview = async (reviewId) => {
+    const token = localStorage.getItem("token");
+
+    const updatedReview = {
+        text: editText.trim(),
+        rating: Number.isInteger(editRating) ? editRating : 0
+    };
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/edit-review/${reviewId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedReview)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+
+        await fetchMovie(); // Atjauno sarakstu
+        setReviewMessage("Atsauksme veiksmīgi rediģēta!");
+        setTimeout(() => setReviewMessage(""), 4000);
+        setEditingReview(null);
+    } catch (err) {
+        setReviewMessageError("Kļūda, rediģējot atsauksmi: " + err.message);
+        setTimeout(() => setReviewMessageError(""), 5000);
+    }
+};
+
+// Sūta sūdzību par filmu vai atsauksmi
+const handleSubmitComplaint = async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        alert("Nepieciešams lietotāja tokens! Lūdzu, piesakieties.");
+        return;
+    }
+
+    if (!complaintSubject.trim() || !complaintText.trim()) {
+        alert("Lūdzu, aizpildiet abus laukus: tēmu un tekstu!");
+        return;
+    }
+
+    try {
+        const response = await fetch("/send-complaint", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+                movie_id: parseInt(id),
+                subject: complaintSubject.trim(),
+                text: complaintText.trim(),
+                review_id: selectedReviewId
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+
+        setGlobalMessage("Sūdzība veiksmīgi nosūtīta!");
+        setGlobalMessageType("success");
+        setTimeout(() => setGlobalMessage(""), 4000);
+        setIsComplaintOpen(false);
+        setComplaintSubject("");
+        setComplaintText("");
+        setSelectedReviewId(null);
+    } catch (error) {
+        console.error("Kļūda, nosūtot sūdzību:", error);
+        setGlobalMessage("Neizdevās nosūtīt sūdzību: " + error.message);
+        setGlobalMessageType("error");
+        setTimeout(() => setGlobalMessage(""), 4000);
+    }
+};
+
+// Dzēš atsauksmi
+const handleDeleteReview = async (reviewId) => {
+    const token = localStorage.getItem("token");
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` 
+            }
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+
+        setReviewMessage("Atsauksme veiksmīgi dzēsta!");
+        setTimeout(() => setReviewMessage(""), 4000);
+        setConfirmDeleteId(null);
+        await fetchMovie(); // Atjauno sarakstu
+    } catch (err) {
+        setReviewMessageError("Kļūda, dzēšot atsauksmi: " + err.message);
+        setTimeout(() => setReviewMessageError(""), 5000);
+    }
+};
     return (
         <div className="movie-details-container">
             {/* Augšējā navigācija */}
