@@ -90,7 +90,6 @@ def get_users():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # Filmas pievienošanas maršruts
 @bp.route("/add-movie", methods=["POST"])
 @jwt_required()
@@ -477,20 +476,20 @@ def add_actor():
             try:
                 birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"error": "Дата рождения должна быть в формате YYYY-MM-DD"}), 400
+                return jsonify({"error": "Dzimšanas datumam jābūt formātā YYYY-MM-DD"}), 400
 
         death_date_obj = None
         if death_date:
             try:
                 death_date_obj = datetime.strptime(death_date, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"error": "Дата смерти должна быть в формате YYYY-MM-DD"}), 400
+                return jsonify({"error": "Nāves datumam jābūt YYYY-MM-DD formātām"}), 400
 
         new_actor = Actor(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
         db.session.add(new_actor)
         db.session.commit()
 
-        return jsonify({"message": "Актёр успешно добавлен", "actor_id": new_actor.id}), 201
+        return jsonify({"message": "Aktieris veiksmīgi pievienots", "actor_id": new_actor.id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -502,18 +501,18 @@ def add_actor_to_movie():
         actor_id = data.get('actor_id')
 
         if not movie_id or not actor_id:
-            return jsonify({"error": "Нужны 'movie_id' и 'actor_id'"}), 400
+            return jsonify({"error": "Vajag 'movie_id' и 'actor_id'"}), 400
 
         movie = Movie.query.get(movie_id)
         actor = Actor.query.get(actor_id)
 
         if not movie or not actor:
-            return jsonify({"error": "Фильм или актёр не найдены"}), 404
+            return jsonify({"error": "Filma vai aktieris nav atrasts"}), 404
 
         movie.actors.append(actor)
         db.session.commit()
 
-        return jsonify({"message": f"Актёр {actor.name} добавлен в фильм {movie.title}"}), 200
+        return jsonify({"message": f"Aktieris {actor.name} pievienots filmā {movie.title}"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -522,7 +521,7 @@ def get_actors_by_movie(movie_id):
     try:
         movie = Movie.query.get(movie_id)
         if not movie:
-            return jsonify({"error": "Фильм не найден"}), 404
+            return jsonify({"error": "Filma nav atrasta"}), 404
 
         actors = movie.actors
         actor_list = [
@@ -545,7 +544,7 @@ def get_movies_by_actor(actor_id):
     try:
         actor = Actor.query.get(actor_id)
         if not actor:
-            return jsonify({"error": "Актёр не найден"}), 404
+            return jsonify({"error": "Aktieris nav atrasts"}), 404
 
         movies = actor.movies
         movie_list = [{"id": movie.id, "title": movie.title, "release_date": str(movie.release_date)} for movie in movies]
@@ -612,7 +611,7 @@ def add_director():
         new_director = Director(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
         db.session.add(new_director)
         db.session.commit()
-        return jsonify({"message": "Режиссёр успешно добавлен", "director_id": new_director.id}), 201
+        return jsonify({"message": "Režisors veiksmīgi pievienots", "director_id": new_director.id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -632,7 +631,7 @@ def add_writer():
         new_writer = Writer(name=name, bio=bio, birth_date=birth_date_obj, death_date=death_date_obj)
         db.session.add(new_writer)
         db.session.commit()
-        return jsonify({"message": "Сценарист успешно добавлен", "writer_id": new_writer.id}), 201
+        return jsonify({"message": "Rakstnieks ir veiksmīgi pievienots", "writer_id": new_writer.id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -643,7 +642,7 @@ def add_director_to_movie():
     new_entry = MovieDirectors(movie_id=data['movie_id'], director_id=data['director_id'])
     db.session.add(new_entry)
     db.session.commit()
-    return jsonify({"message": "Режиссёр добавлен к фильму"}), 201
+    return jsonify({"message": "Filmai pievienots režisors"}), 201
 
 # Pievienojiet filmai scenāristu
 @bp.route('/add-writer-to-movie', methods=['POST'])
@@ -652,7 +651,7 @@ def add_writer_to_movie():
     new_entry = MovieWriters(movie_id=data['movie_id'], writer_id=data['writer_id'])
     db.session.add(new_entry)
     db.session.commit()
-    return jsonify({"message": "Сценарист добавлен к фильму"}), 201
+    return jsonify({"message": "Filmai pievienots scenārists"}), 201
 
 # Iegūstiet filmas režisorus
 @bp.route('/get-directors-by-movie/<int:movie_id>', methods=['GET'])
@@ -696,7 +695,7 @@ def get_writers_by_movie(movie_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Получить фильмы конкретного режиссёра
+# Iegūt filmas no konkrēta režisora
 @bp.route('/get-movies-by-director/<int:director_id>', methods=['GET'])
 def get_movies_by_director(director_id):
     movies = db.session.query(Movie).join(MovieDirectors).filter(MovieDirectors.director_id == director_id).all()
@@ -705,7 +704,7 @@ def get_movies_by_director(director_id):
         "movies": [{"id": m.id, "title": m.title} for m in movies]
     })
 
-# Получить фильмы конкретного сценариста
+# Iegūt filmas no konkrēta scenārista
 @bp.route('/get-movies-by-writer/<int:writer_id>', methods=['GET'])
 def get_movies_by_writer(writer_id):
     movies = db.session.query(Movie).join(MovieWriters).filter(MovieWriters.writer_id == writer_id).all()
@@ -929,7 +928,7 @@ def remove_from_favorites():
 @admin_required
 def clean_duplicate_reviews():
     try:
-        # Получаем все дубликаты отзывов
+        # Saņemam visas atkārtotas atsauksmes
         duplicates_query = text("""
             SELECT r1.id 
             FROM review r1
@@ -941,7 +940,7 @@ def clean_duplicate_reviews():
         
         duplicates = db.session.execute(duplicates_query).fetchall()
 
-        # Удаляем все найденные дубликаты
+        # Izdzēšam visus atrastos dublikātus
         for duplicate in duplicates:
             review = Review.query.get(duplicate[0])
             db.session.delete(review)
@@ -959,8 +958,8 @@ def get_profile():
         if not token:
             return jsonify({"error": "Nav autorizācijas galvenes!"}), 401
         
-        user_role = request.headers.get("User-Role")  # Получаем роль
-        user_email = request.headers.get("User-Email")  # Получаем email
+        user_role = request.headers.get("User-Role")
+        user_email = request.headers.get("User-Email")  
 
         if not user_email:
             return jsonify({"error": "Nav norādīts e-pasts"}), 400
