@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/AddMovie.css";
 
+// Komponents jaunas filmas pievienošanai 
 const AddMovie = () => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -14,10 +15,15 @@ const AddMovie = () => {
     const [awards, setAwards] = useState("");
     const [duration, setDuration] = useState("");
     const [ageRating, setAgeRating] = useState("");
+    const [actors, setActors] = useState("");
+    const [directors, setDirectors] = useState("");
+    const [writers, setWriters] = useState("");
     const [errors, setErrors] = useState({});
-    
+    const [addSuccess, setAddSuccess] = useState(false);
+
     const navigate = useNavigate();
 
+    // Validācijas funkcija — pārbauda, vai dati ir korekti aizpildīti
     const validate = () => {
         const newErrors = {};
 
@@ -32,6 +38,7 @@ const AddMovie = () => {
         return newErrors;
     };
 
+    // Apstrādā formas iesniegšanu un nosūta datus uz serveri
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -43,6 +50,7 @@ const AddMovie = () => {
 
         setErrors({});
 
+        // Sagatavo filmas objektu sūtīšanai uz serveri
         const movieData = {
             title: title.trim(),
             description: description.trim(),
@@ -54,30 +62,35 @@ const AddMovie = () => {
             box_office: boxOffice.trim() || null,
             awards: awards ? awards.split(";").map(a => a.trim()) : [],
             duration: duration ? parseInt(duration) : null,
-            age_rating: ageRating.trim() || null
+            age_rating: ageRating.trim() || null,
+            // Atbalsta arī aktieru, režisoru un scenāristu sarakstus
+            actors: actors ? actors.split(",").map(a => a.trim()) : [],
+            directors: directors ? directors.split(",").map(d => d.trim()) : [],
+            writers: writers ? writers.split(",").map(w => w.trim()) : []
         };
 
         try {
             const response = await fetch("http://127.0.0.1:5000/add-movie", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
                 },
                 body: JSON.stringify(movieData)
             });
 
             const data = await response.json();
             if (response.ok) {
-                alert("Filma veiksmīgi pievienota!");
-                navigate("/catalog");
+                setAddSuccess(true); // Parāda veiksmes paziņojumu
             } else {
                 alert(`Kļūda: ${data.error || "Neizdevās pievienot filmu!"}`);
             }
         } catch (error) {
-            console.error("Error:", error);
-            alert("Servera kļūda!");
+            console.error("Servera kļūda:", error);
+            alert("Neizdevās savienoties ar serveri!");
         }
     };
+};
 
     return (
         <div className="add-movie-container">
