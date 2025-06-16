@@ -91,15 +91,24 @@ def get_users():
         return jsonify({"error": str(e)}), 500
 
 
+# Filmas pievienošanas maršruts
 @bp.route("/add-movie", methods=["POST"])
+@jwt_required()
 def add_movie():
+    """
+    Pievieno jaunu filmu datubāzei. Pieejams tikai administratoriem.
+    """
     try:
-        user = User.query.filter_by(role="admin").first()
-        if not user:
-            return jsonify({"error": "Nav administratora!"}), 403
+        # Iegūst lietotāja ID no JWT tokena
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
 
+        # Tikai administrators var pievienot filmas
+        if not user or user.role != "admin":
+            return jsonify({"error": "Tikai administratoriem ir atļauts pievienot filmas."}), 403
+
+        # Datu izgūšana no pieprasījuma
         data = request.get_json()
-
         title = (data.get("title") or "").strip()
         description = (data.get("description") or "").strip()
         release_date = (data.get("release_date") or "").strip()
@@ -112,16 +121,25 @@ def add_movie():
         duration = data.get("duration")
         age_rating = (data.get("age_rating") or "").strip()
 
+        # Papildu lauki – aktieri, režisori, scenāristi
+        actors = json.dumps(data.get("actors", []))
+        directors = json.dumps(data.get("directors", []))
+        writers = json.dumps(data.get("writers", []))
+
+        # Obbligātie lauki
         if not title or not release_date or not genres:
             return jsonify({"error": "Nepieciešams nosaukums, izlaišanas datums un žanrs."}), 400
 
+        # Datuma validācija
         try:
             release_date = datetime.strptime(release_date, "%Y-%m-%d").date()
         except ValueError:
             return jsonify({"error": "Nepareizs datums! Izmantojiet YYYY-MM-DD formātu."}), 400
 
+        # Žanru formatēšana
         genres_str = ", ".join(genres) if isinstance(genres, list) else genres
 
+        # Jaunas filmas objekta izveide
         new_movie = Movie(
             title=title,
             description=description,
@@ -133,49 +151,66 @@ def add_movie():
             box_office=box_office if box_office else None,
             awards=awards if awards else None,
             duration=duration if duration else None,
-            age_rating=age_rating if age_rating else None
+            age_rating=age_rating if age_rating else None,
+            actors=actors if actors else None,
+            directors=directors if directors else None,
+            writers=writers if writers else None
         )
 
+        # Saglabāšana datubāzē
         db.session.add(new_movie)
         db.session.commit()
 
-        return jsonify({"message": "Filma veiksmīgi pievienota!", "movie_id": new_movie.id}), 201
+        return jsonify({
+            "message": "Filma veiksmīgi pievienota!",
+            "movie_id": new_movie.id
+        }), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Maršruts, kas atgriež visas filmas no datubāzes
 @bp.route('/get-movies', methods=['GET'])
 def get_movies():
     try:
+        # Iegūst visas filmas no datubāzes
         movies = Movie.query.all()
+
+        # Sagatavo rezultātu sarakstu ar nepieciešamajiem laukiem
         movie_list = [{
             "id": movie.id,
             "title": movie.title,
             "description": movie.description,
             "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
             "genres": movie.genres.split(", ") if movie.genres else [],
-            "poster_url": movie.poster_url 
+            "poster_url": movie.poster_url
         } for movie in movies]
 
+        # Atgriež filmu sarakstu JSON formātā
         return jsonify({"movies": movie_list}), 200
     except Exception as e:
+        # Ja rodas kļūda, tiek atgriezts kļūdas paziņojums
         return jsonify({"error": str(e)}), 500
     
+# Atgriež visus Latvijas filmas ar iespēju filtrēt pēc nosaukuma un žanra
 @bp.route('/get-latvian-movies', methods=['GET'])
 def get_latvian_movies():
     try:
-        title = request.args.get('title')
-        genre = request.args.get('genre')
+        title = request.args.get('title')  # Nosaukuma filtrs (pēc daļas)
+        genre = request.args.get('genre')  # Žanra filtrs
 
+        # Meklējam tikai tās filmas, kuru valsts ir "Latvia"
         query = Movie.query.filter_by(country="Latvia")
 
         if title:
-            query = query.filter(Movie.title.ilike(f"%{title}%"))
+            query = query.filter(Movie.title.ilike(f"%{title}%"))  # Nejutīgs pret reģistru
 
         if genre:
             query = query.filter(Movie.genres.ilike(f"%{genre}%"))
 
         movies = query.all()
+
+        # Formatējam rezultātu sarakstu JSON struktūrā
         movie_list = [{
             "id": movie.id,
             "title": movie.title,
@@ -188,6 +223,7 @@ def get_latvian_movies():
         return jsonify({"movies": movie_list}), 200
 
     except Exception as e:
+        # Atgriežam kļūdas paziņojumu, ja kaut kas noiet greizi
         return jsonify({"error": str(e)}), 500
     
 def search_latvian_movies():
@@ -225,6 +261,9 @@ def search_latvian_movies():
 
 @bp.route('/search-movies', methods=['GET'])
 def search_movies():
+    """
+    Meklē filmas.
+    """
     try:
         title = request.args.get('title')
         release_date_after = request.args.get('release_date_after')
@@ -234,20 +273,21 @@ def search_movies():
 
         query = Movie.query
 
+        # Filtrēšana
         if title:
             query = query.filter(Movie.title.ilike(f"%{title}%"))
 
         if release_date_after:
             try:
-                from datetime import datetime
                 date_obj = datetime.strptime(release_date_after, '%Y-%m-%d').date()
                 query = query.filter(Movie.release_date > date_obj)
             except ValueError:
-                return jsonify({"error": "Дата должна быть в формате YYYY-MM-DD"}), 400
+                return jsonify({"error": "Datums jānorāda formātā YYYY-MM-DD"}), 400
 
         if genre:
             query = query.filter(Movie.genres.ilike(f"%{genre}%"))
 
+        # Kārtošana
         if sort_by:
             if sort_by == "title":
                 query = query.order_by(Movie.title.asc() if order == "asc" else Movie.title.desc())
@@ -257,50 +297,49 @@ def search_movies():
         movies = query.all()
 
         movie_list = [
-    {
-        "id": movie.id,
-        "title": movie.title,
-        "description": movie.description,
-        "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
-        "genres": movie.genres.split(", ") if movie.genres else [],
-        "poster_url": movie.poster_url 
-    }
-    for movie in movies
-    ]
+            {
+                "id": movie.id,
+                "title": movie.title,
+                "description": movie.description,
+                "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
+                "genres": movie.genres.split(", ") if movie.genres else [],
+                "poster_url": movie.poster_url
+            }
+            for movie in movies
+        ]
 
         return jsonify({"movies": movie_list}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Definējam maršrutu POST pieprasījumam, lai pievienotu atsauksmi
 @bp.route('/add-review', methods=['POST'])
+@jwt_required()  
 def add_review():
-    user_email = request.headers.get("User-Email")
+    user_id = get_jwt_identity()
 
-    if not user_email:
-        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
-
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
-    user_id = user.id
     data = request.get_json()
-
     if not data:
         return jsonify({"error": "Nevar parsēt JSON!"}), 400
 
+    # Izgūstam attiecīgos laukus no JSON
     movie_id = data.get('movie_id')
     rating = data.get('rating')
     text = data.get("text")
 
-    # 🔧 Убираем пробелы и оставляем пустую строку, если текста нет
+    # Apstrādājam tekstu: noņemam liekās atstarpes vai uzstādam tukšu virkni
     text = (text or "").strip()
 
-    # ✅ Проверяем, что хотя бы одно поле задано
-    if rating is None and text is None:
+    # Pārbaudām, vai vismaz viens no laukiem (vērtējums vai teksts) ir aizpildīts
+    if rating is None and text == "":
         return jsonify({"error": "Jābūt vismaz vērtējumam vai tekstam!"}), 400
 
+    # Ja vērtējums ir iesniegts, pārliecināmies, ka tas ir derīgs skaitlis 1-5
     if rating is not None:
         try:
             rating = int(rating)
@@ -310,32 +349,35 @@ def add_review():
         if rating < 1 or rating > 5:
             return jsonify({"error": "Vērtējumam jābūt no 1 līdz 5!"}), 400
 
+    # Pārbaudām, vai filma eksistē
     movie = Movie.query.get(movie_id)
     if not movie:
         return jsonify({"error": "Filma nav atrasta!"}), 404
 
+    # Pārbaudām, vai lietotājs jau nav pievienojis atsauksmi par šo filmu
     existing_review = Review.query.filter_by(movie_id=movie_id, user_id=user_id).first()
     if existing_review:
         return jsonify({"error": "Jūs jau esat atstājis atsauksmi par šo filmu!"}), 400
 
-    # Ja vērtējums nav iestatīts, iestatiet uz 0
+    # Ja vērtējums nav norādīts, iestatām to uz noklusēto vērtību
     review_rating = rating if rating is not None else 0
 
-# ✅ Ja ir teksts, pārbaudām to
+    # Pārbaudām, vai tekstā nav neatļautu vārdu
     if text:
         if contains_forbidden_word(text):
             return jsonify({"error": "Atsauksmē ir neatļauti vārdi!"}), 400
 
-
+    # Izveidojam jaunu atsauksmi un saglabājam datubāzē
     new_review = Review(movie_id=movie_id, user_id=user_id, text=text, rating=review_rating)
     db.session.add(new_review)
     db.session.commit()
 
-    # Vidējā vērtējuma pārrēķināšana
+    # Pārrēķinām filmas vidējo vērtējumu no visām atsauksmēm
     reviews = Review.query.filter_by(movie_id=movie_id).all()
     valid_ratings = [r.rating for r in reviews if r.rating]
     avg_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
 
+    # Atgriežam atbildi ar veiksmīgu paziņojumu un jauno atsauksmi
     return jsonify({
         "message": "Atsauksme veiksmīgi pievienota!",
         "review": {
@@ -347,21 +389,31 @@ def add_review():
         "average_rating": avg_rating
     }), 201
 
-
 @bp.route("/update-movie/<int:movie_id>", methods=["PUT"])
+@jwt_required()
 def update_movie(movie_id):
+    """
+    Atjaunina filmas datus. Pieejams tikai administratoriem.
+    """
     try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.role != "admin":
+            return jsonify({"error": "Tikai administratoriem ir atļauts rediģēt filmas."}), 403
+
         data = request.get_json()
         movie = Movie.query.get(movie_id)
 
         if not movie:
             return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # ✅ Filmas galveno datu atjaunināšana
+        # Galveno lauku atjaunināšana
         movie.title = data.get("title", movie.title)
         movie.description = data.get("description", movie.description)
-        movie.release_date = datetime.strptime(data["release_date"], "%Y-%m-%d").date() if "release_date" in data else movie.release_date
-        movie.genres = ", ".join(data["genres"]) if "genres" in data else movie.genres
+        if "release_date" in data:
+            movie.release_date = datetime.strptime(data["release_date"], "%Y-%m-%d").date()
+        if "genres" in data:
+            movie.genres = ", ".join(data["genres"])
         movie.poster_url = data.get("poster_url", movie.poster_url)
         movie.trailer_url = data.get("trailer_url", movie.trailer_url)
         movie.country = data.get("country", movie.country)
@@ -370,6 +422,14 @@ def update_movie(movie_id):
         movie.duration = data.get("duration", movie.duration)
         movie.age_rating = data.get("age_rating", movie.age_rating)
 
+        # Radošās komandas atjaunināšana (aktieri, režisori, scenāristi)
+        if "actors" in data:
+            movie.actors = json.dumps(data["actors"])
+        if "directors" in data:
+            movie.directors = json.dumps(data["directors"])
+        if "writers" in data:
+            movie.writers = json.dumps(data["writers"])
+
         db.session.commit()
         return jsonify({"message": "Filma veiksmīgi atjaunināta!"}), 200
 
@@ -377,21 +437,24 @@ def update_movie(movie_id):
         return jsonify({"error": str(e)}), 500
     
 @bp.route('/delete-movie/<int:movie_id>', methods=['DELETE'])
+@jwt_required()
 def delete_movie(movie_id):
+    """
+    Dzēš filmu no datubāzes. Pieejams tikai administratoriem.
+    """
     try:
-        # ✅ Pārbaudīsim, vai šis ir administrators.
-        user_role = request.headers.get("User-Role")
-        if user_role != "admin":
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.role != "admin":
             return jsonify({"error": "Tikai administratoriem ir tiesības dzēst filmas!"}), 403
 
-        # ✅ Pārbauda, ​​vai filma eksistē
         movie = Movie.query.get(movie_id)
         if not movie:
             return jsonify({"error": "Filma nav atrasta"}), 404
 
-        # ✅ Dzēst filmu
         db.session.delete(movie)
         db.session.commit()
+
         return jsonify({"message": f"Filma '{movie.title}' veiksmīgi dzēsta!"}), 200
 
     except Exception as e:
@@ -653,13 +716,15 @@ def get_actors():
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/delete-review/<int:review_id>', methods=['DELETE'])
+@jwt_required()
 def delete_review(review_id):
-    user_email = request.headers.get("User-Email")
+    """
+    Dzēš konkrētu atsauksmi. Lietotājs drīkst dzēst tikai savas atsauksmes.
+    Moderators un administrators — jebkuru.
+    """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
 
-    if not user_email:
-        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
-
-    user = User.query.filter_by(email=user_email).first()
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
@@ -667,7 +732,8 @@ def delete_review(review_id):
     if not review:
         return jsonify({"error": "Atsauksme nav atrasta!"}), 404
 
-    if review.user_id != user.id and not user.is_moderator() and not user.is_admin():
+    # Tiesību pārbaude
+    if review.user_id != user.id and user.role not in ["moderator", "admin"]:
         return jsonify({"error": "Jums nav tiesību dzēst šo atsauksmi!"}), 403
 
     db.session.delete(review)
@@ -675,46 +741,62 @@ def delete_review(review_id):
 
     return jsonify({"message": "Atsauksme veiksmīgi dzēsta!"}), 200
     
+#Šis maršruts ļauj lietotājam pievienot filmu savam vēlmju sarakstam
 @bp.route("/add-to-favorites", methods=["POST"])
+@jwt_required()  # Nepieciešams derīgs JWT tokens
 def add_to_favorites():
+    # Saņem datus no klienta puses JSON formātā
     data = request.get_json()
-    movie_id = data.get("movie_id")
-    user_email = request.headers.get("User-Email") 
+    movie_id = data.get("movie_id")  # Filmas ID, kuru lietotājs vēlas pievienot
 
-    print(f"DEBUG: User-Email получен -> {user_email}") 
+    # No JWT iegūstam lietotāja identitāti (šajā gadījumā — e-pastu)
+    user_email = get_jwt_identity()
+    print(f"DEBUG: Lietotāja e-pasts saņemts -> {user_email}")
 
+    # Ja e-pasts nav norādīts (drošības pārbaude)
     if not user_email:
         return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
 
+    # Mēģina atrast lietotāju pēc e-pasta datubāzē
     user = User.query.filter_by(email=user_email).first()
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
+    # Pārbauda, vai šāda filma vispār eksistē
     movie = Movie.query.get(movie_id)
     if not movie:
         return jsonify({"error": "Filma nav atrasta!"}), 404
 
+    # Pārbauda, vai filma jau nav pievienota favorītiem
     existing_favorite = FavoriteMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
     if existing_favorite:
         return jsonify({"error": "Šī filma jau ir pievienota favorītiem!"}), 400
 
+    # Ja viss kārtībā — izveido jaunu favorīta ierakstu
     new_favorite = FavoriteMovie(user_id=user.id, movie_id=movie_id)
-    db.session.add(new_favorite)
-    db.session.commit()
+    db.session.add(new_favorite)  # Pievieno jauno ierakstu sesijā
+    db.session.commit()           # Saglabā izmaiņas datubāzē
 
+    # Atgriež pozitīvu atbildi klientam
     return jsonify({"message": "Filma veiksmīgi pievienota vēlmju sarakstam!"}), 201
 
+# Šis maršruts atgriež visas lietotāja favorītfilmas
 @bp.route('/favorites', methods=['GET'])
+@jwt_required()  # Nepieciešams derīgs JWT tokens
 def get_favorites():
-    user_email = request.headers.get("User-Email")
+    # Iegūst lietotāja identitāti (e-pastu) no JWT tokena
+    user_email = get_jwt_identity()
 
+    # Drošības pārbaude — ja kaut kādu iemeslu dēļ e-pasts nav iegūts
     if not user_email:
         return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
 
+    # Atrod lietotāju datubāzē
     user = User.query.filter_by(email=user_email).first()
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
+    # Vaicājums, kas atrod visas filmas, kuras šis lietotājs ir pievienojis kā favorītus
     favorites = (
         db.session.query(Movie)
         .join(FavoriteMovie, Movie.id == FavoriteMovie.movie_id)
@@ -722,87 +804,95 @@ def get_favorites():
         .all()
     )
 
-    return jsonify({"favorites": [
-        {
-            "id": movie.id,
-            "title": movie.title,
-            "description": movie.description,
-            "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else "Nav zināms",
-            "genres": movie.genres.split(", ") if movie.genres else ["Nav norādīts"],
-            "poster_url": movie.poster_url
-        }
-        for movie in favorites
-    ]}), 200
+    # Formatē un atgriež atrastās filmas JSON formātā
+    return jsonify({
+        "favorites": [
+            {
+                "id": movie.id,
+                "title": movie.title,
+                "description": movie.description,
+                "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else "Nav zināms",
+                "genres": movie.genres.split(", ") if movie.genres else ["Nav norādīts"],
+                "poster_url": movie.poster_url
+            }
+            for movie in favorites
+        ]
+    }), 200
 
 @bp.route('/get-movie/<int:movie_id>', methods=['GET'])
-def get_movie(movie_id):  # ❌ Убираем @jwt_required(), чтобы не требовалась авторизация
+def get_movie(movie_id):
     try:
+        # Iegūstam filmu pēc ID no datubāzes
         movie = Movie.query.get(movie_id)
         if not movie:
-            return jsonify({"error": "Фильм не найден"}), 404
+            return jsonify({"error": "Filma nav atrasta!"}), 404
 
-        # Получаем актёров
+        # Iegūstam saistītos aktierus (daudz-pre-daudz attiecības)
         actors = [{"id": actor.id, "name": actor.name} for actor in movie.actors]
 
-        # Получаем режиссёров
+        # Iegūstam režisorus (caur saistīto tabulu MovieDirectors)
         directors = db.session.query(Director).join(MovieDirectors).filter(MovieDirectors.movie_id == movie_id).all()
         director_list = [{"id": director.id, "name": director.name} for director in directors]
 
-        # Получаем сценаристов
+        # Iegūstam scenāristus (caur saistīto tabulu MovieWriters)
         writers = db.session.query(Writer).join(MovieWriters).filter(MovieWriters.movie_id == movie_id).all()
         writer_list = [{"id": writer.id, "name": writer.name} for writer in writers]
 
-        # Получаем отзывы
+        # Iegūstam atsauksmes par filmu
         reviews = Review.query.filter_by(movie_id=movie_id).all()
         review_list = [
             {
                 "id": review.id,
-                "user_email": review.user.email,
-                "user_name": review.user.username, # ✅ Теперь передается email автора
+                "user_email": review.user.email,  # Lietotāja e-pasts
+                "user_name": review.user.username,  # Lietotājvārds
                 "text": review.text,
                 "rating": review.rating,
-                "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')  # ✅ Форматируем дату
+                "created_at": review.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Formatēta datuma vērtība
             }
             for review in reviews
         ]
 
-        # ✅ Пересчитываем средний рейтинг только по отзывам с оценкой
+        # Aprēķinām vidējo vērtējumu tikai no atsauksmēm, kur ir norādīts vērtējums
         valid_ratings = [r.rating for r in reviews if r.rating and r.rating > 0]
         average_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
 
-
-        # ✅ Добавлены новые поля
+        # Veidojam gala JSON atbildi ar pilnu informāciju par filmu
         return jsonify({
             "id": movie.id,
             "title": movie.title,
             "description": movie.description,
             "release_date": movie.release_date.strftime('%Y-%m-%d') if movie.release_date else None,
             "genres": movie.genres.split(", ") if movie.genres else [],
-            "poster_url": movie.poster_url,  # ✅ Уже было
-            "trailer_url": movie.trailer_url,  # ✅ Уже было
-            "average_rating": round(average_rating, 1),
+            "poster_url": movie.poster_url,
+            "trailer_url": movie.trailer_url,
+            "average_rating": average_rating,
             "reviews": review_list,
             "actors": actors,
             "directors": director_list,
             "writers": writer_list,
-            "country": movie.country, 
-            "box_office": movie.box_office,  # 💰 Кассовые сборы
-            "awards": json.loads(movie.awards) if movie.awards else [],  # 🏆 Список наград (JSON)
-            "duration": movie.duration,  # ⏳ Длительность
-            "age_rating": movie.age_rating,  # 🔞 Возрастное ограничение
+            "country": movie.country,
+            "box_office": movie.box_office,  # Kases ieņēmumi
+            "awards": json.loads(movie.awards) if movie.awards else [],  # Nominācijas/Balvas
+            "duration": movie.duration,  # Filmas ilgums minūtēs
+            "age_rating": movie.age_rating  # Vecuma ierobežojums
         }), 200
 
     except Exception as e:
+        # Kļūda apstrādes laikā – atgriežam servera kļūdas paziņojumu
         return jsonify({"error": str(e)}), 500
     
+# Maršruts, kas noņem filmu no lietotāja favorītiem
 @bp.route("/remove-from-favorites", methods=["DELETE"])
+@jwt_required()  # Nodrošina, ka tikai autorizēts lietotājs var piekļūt
 def remove_from_favorites():
     data = request.get_json()
     movie_id = data.get("movie_id")
-    user_email = request.headers.get("User-Email")  # ✅ Теперь берем email из запроса
+
+    # Iegūst pašreizējā lietotāja e-pastu no JWT identitātes
+    user_email = get_jwt_identity()
 
     if not user_email:
-        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+        return jsonify({"error": "Lietotāja identitāte nav atrasta!"}), 400
 
     user = User.query.filter_by(email=user_email).first()
     if not user:
@@ -810,14 +900,14 @@ def remove_from_favorites():
 
     favorite = FavoriteMovie.query.filter_by(user_id=user.id, movie_id=movie_id).first()
     if not favorite:
-        return jsonify({"error": "Filma nav atrasta favorītos!"}), 400  # Ошибка остается, но теперь для текущего пользователя
+        return jsonify({"error": "Filma nav atrasta favorītos!"}), 400
 
     db.session.delete(favorite)
     db.session.commit()
 
     return jsonify({"message": "Filma veiksmīgi izņemta no favorītiem!"}), 200
 
-@bp.route('/clean-duplicate-reviews', methods=['DELETE']) #Этот кусок кода не настолько важный, но он удаляет дубликаты, если они вдруг во время разработки появились
+@bp.route('/clean-duplicate-reviews', methods=['DELETE']) #Šis koda fragments nav tik svarīgs, taču tas noņem atkārtotas atsauksmes, ja tās pēkšņi parādījās izstrādes laikā
 @jwt_required()
 @admin_required
 def clean_duplicate_reviews():
@@ -872,42 +962,51 @@ def get_profile():
         return jsonify({"error": str(e)}), 500
     
 @bp.route('/toggle-block-user/<int:user_id>', methods=['PUT'])
+@jwt_required()
 def toggle_block_user(user_id):
+    """
+    Administratoram ir iespēja bloķēt vai atbloķēt lietotājus.
+    """
     try:
-        admin_role = request.headers.get("User-Role")
-        if admin_role != "admin":
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+
+        if not current_user or current_user.role != "admin":
             return jsonify({"error": "Tikai administratoriem ir tiesības bloķēt lietotājus!"}), 403
 
         user = User.query.get(user_id)
         if not user:
             return jsonify({"error": "Lietotājs nav atrasts"}), 404
 
-        user.is_blocked = not user.is_blocked  # 🔄 Переключаем статус блокировки
+        user.is_blocked = not user.is_blocked
         db.session.commit()
 
         status = "bloķēts" if user.is_blocked else "atbloķēts"
         return jsonify({"message": f"Lietotājs {user.username} ir {status}!"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Maršruts, kas nodrošina iespēju autentificētam lietotājam rediģēt savu atsauksmi par filmu.
 @bp.route('/edit-review/<int:review_id>', methods=['PUT'])
+@jwt_required()
 def edit_review(review_id):
-    user_email = request.headers.get("User-Email")
+    user_id = get_jwt_identity()
 
-    if not user_email:
-        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+    if not user_id:
+        return jsonify({"error": "Autentifikācija neizdevās!"}), 401
 
-    user = User.query.filter_by(email=user_email).first()
+    # Iegūstam lietotāju no datubāzes
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
+    # Iegūstam atsauksmi pēc ID
     review = Review.query.get(review_id)
     if not review:
         return jsonify({"error": "Atsauksme nav atrasta!"}), 404
 
-    if review.user_id != user.id and not user.is_moderator():
-        return jsonify({"error": "Jūs nevarat dzēst šo atsauksmi!"}), 403
-
+    # Saņemam jaunos datus no pieprasījuma
     data = request.get_json()
     new_text = (data.get("text") or "").strip()
 
@@ -916,27 +1015,29 @@ def edit_review(review_id):
         if new_rating < 0 or new_rating > 5:
             return jsonify({"error": "Vērtējumam jābūt no 0 līdz 5!"}), 400
     except (ValueError, TypeError):
-        return jsonify({"error": "Vērtējumam jābūt skaitlim no 0 līdz 5!"}), 400
+        return jsonify({"error": "Vērtējumam jābūt skaitliskai vērtībai no 0 līdz 5!"}), 400
 
-    # ✅ Если есть текст — проверяем плохие слова
+    # Ja teksts ir norādīts — pārbaudām uz aizliegtajiem vārdiem
     if new_text:
         if contains_forbidden_word(new_text):
             return jsonify({"error": "Atsauksmē ir neatļauti vārdi!"}), 400
 
-    # ✅ Разрешаем оставить только оценку или только текст
+    # Vismaz tekstam vai vērtējumam ir jābūt — abi lauki nevar būt tukši
     if not new_text and new_rating == 0:
         return jsonify({"error": "Jābūt vismaz vērtējumam vai atsauksmes tekstam!"}), 400
 
+    # Saglabājam atsauksmes izmaiņas datubāzē
     review.text = new_text if new_text else None
     review.rating = new_rating
     db.session.commit()
 
-    # ✅ Пересчитываем среднюю оценку
+    # Pārrēķinām vidējo vērtējumu konkrētajai filmai
     movie_id = review.movie_id
     all_reviews = Review.query.filter_by(movie_id=movie_id).all()
     valid_ratings = [r.rating for r in all_reviews if r.rating > 0]
     average_rating = round(sum(valid_ratings) / len(valid_ratings), 1) if valid_ratings else 0.0
 
+    # Atgriežam veiksmīgu atbildi ar jauno atsauksmes saturu un vidējo vērtējumu
     return jsonify({
         "message": "Atsauksme veiksmīgi rediģēta!",
         "review": {
@@ -948,26 +1049,31 @@ def edit_review(review_id):
         "average_rating": average_rating
     }), 200
 
+# Modulis, kas ļauj autentificētiem moderatoram vai administrātoram apskatīt sūdzības par filmām vai atsauksmēm
 @bp.route('/view-complaints', methods=['GET'])
+@jwt_required()
 def view_complaints():
-    """Модератор или администратор просматривает список жалоб"""
     try:
-        email = request.headers.get("User-Email")
-        user = User.query.filter_by(email=email).first()
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
 
-        # ✅ Разрешаем доступ и модератору, и администратору
+        # Tikai moderators vai administrators drīkst piekļūt sūdzību sarakstam
         if not user or not (user.is_moderator() or user.is_admin()):
             return jsonify({"error": "Darbība nav atļauta"}), 403
 
+        # Atlasām visas sūdzības ar statusu “neatrisināta”
         complaints = Complaint.query.filter_by(status="neatrisināta").all()
 
         complaints_list = []
         for c in complaints:
+            # Pievienojam filmas nosaukumu, ja tāda pastāv
             movie = Movie.query.get(c.movie_id)
             movie_title = movie.title if movie else f"ID: {c.movie_id}"
+
+            # Ja sūdzība ir par atsauksmi — pievienojam arī tās tekstu
             review = Review.query.get(c.review_id) if c.review_id else None
             review_text = review.text if review else None
-            
+
             complaints_list.append({
                 "id": c.id,
                 "user_email": c.user_email,
@@ -977,7 +1083,6 @@ def view_complaints():
                 "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else None,
                 "status": c.status,
                 "review_text": review_text,
-                "type": "movie",
                 "type": "review" if c.review_id else "movie"
             })
 
@@ -987,20 +1092,23 @@ def view_complaints():
         return jsonify({"error": str(e)}), 500
     
 @bp.route('/send-complaint', methods=['POST'])
+@jwt_required()
 def send_complaint():
-    user_email = request.headers.get("User-Email")
+    user_id = get_jwt_identity()
     data = request.get_json()
 
-    if not user_email or not data.get("movie_id") or not data.get("subject") or not data.get("text"):
+    # Pārbaudām, vai visi nepieciešamie lauki ir ievadīti
+    if not data.get("movie_id") or not data.get("subject") or not data.get("text"):
         return jsonify({"error": "Nepareizi ievadīti dati!"}), 400
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
+    # Izveidojam jaunu sūdzību
     new_complaint = Complaint(
-        user_email=user_email,
-        user_id=user.id,  # 👈 теперь добавляем ID
+        user_email=user.email,
+        user_id=user.id,
         movie_id=data["movie_id"],
         subject=data["subject"],
         text=data["text"],
@@ -1012,10 +1120,18 @@ def send_complaint():
 
     return jsonify({"message": "Sūdzība veiksmīgi saņemta!"}), 201
 
+# Modulis, kas ļauj autentificētiem moderatoram vai administrātoram mainīt sūdzības statussu
 @bp.route('/resolve-complaint/<int:complaint_id>', methods=['PUT'])
+@jwt_required()
 def resolve_complaint(complaint_id):
     try:
-        action = request.args.get("action")  # "resolved" or "rejected"
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+
+        if not user or not (user.is_moderator() or user.is_admin()):
+            return jsonify({"error": "Darbība nav atļauta"}), 403
+
+        action = request.args.get("action")  # "resolved" vai "rejected"
         comment = request.args.get("comment", "").strip()
 
         if action not in ["resolved", "rejected"]:
@@ -1025,10 +1141,10 @@ def resolve_complaint(complaint_id):
         if not complaint:
             return jsonify({"error": "Sūdzība nav atrasta!"}), 404
 
-        # ✅ Обновляем статус
+        # Atjaunojam statusu atkarībā no izvēlētās darbības
         complaint.status = "atrisināta" if action == "resolved" else "noraidīta"
 
-        # ✅ Сохраняем комментарий, если есть
+        # Ja sūdzība tiek noraidīta — saglabājam komentāru no moderatora
         if action == "rejected" and comment:
             complaint.moderator_comment = comment
 
@@ -1061,9 +1177,12 @@ def get_user_reviews():
 
     return jsonify({"reviews": review_list}), 200
 
+#Lietotāja profila datu atjaunināšana
 @bp.route('/update-profile', methods=['PUT'])
+@jwt_required()
 def update_profile():
-    user_email = request.headers.get("User-Email")
+    """Lietotājs var atjaunināt savu profilu — vārdu, e-pastu, paroli."""
+    user_id = get_jwt_identity()
     data = request.get_json()
 
     new_username = (data.get("username") or "").strip()
@@ -1071,22 +1190,20 @@ def update_profile():
     current_password = data.get("current_password")
     new_password = data.get("new_password")
 
-    if not user_email:
-        return jsonify({"error": "Nav norādīts e-pasts"}), 400
-
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
-    # ✅ Проверка пароля, если меняется
+    # Jauna parole.
     if new_password:
         if not current_password or not user.check_password(current_password):
             return jsonify({"error": "Nepareiza pašreizējā parole!"}), 400
         user.set_password(new_password)
 
-    # ✅ Проверка имени и почты
+    # Lietotājvārda un e-pasta maiņa
     if new_username and new_username != user.username:
         user.username = new_username
+
     if new_email and new_email != user.email:
         if User.query.filter_by(email=new_email).first():
             return jsonify({"error": "Šis e-pasts jau ir aizņemts!"}), 400
@@ -1100,34 +1217,44 @@ def update_profile():
         "email": user.email
     }), 200
 
+# Skatīt savas apstrādātās sūdzības.
 @bp.route('/get-user-complaints', methods=['GET'])
+@jwt_required()
 def get_user_complaints():
-    email = request.headers.get("User-Email")
-    user = User.query.filter_by(email=email).first()
+    """Lietotājs skatās savas sūdzības, kuras jau ir apstrādātas (ne "neatrisināta")."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts"}), 404
 
     complaints = Complaint.query.filter_by(user_id=user.id).filter(
         Complaint.status != "neatrisināta",
-        Complaint.is_dismissed_by_user == False  # ← добавлено условие
+        Complaint.is_dismissed_by_user == False
     ).all()
 
     result = []
     for c in complaints:
         result.append({
-    "id": c.id,
-    "subject": c.subject,
-    "text": c.text,
-    "status": c.status,
-    "comment": c.moderator_comment,
-    "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S")
-})
+            "id": c.id,
+            "subject": c.subject,
+            "text": c.text,
+            "status": c.status,
+            "comment": c.moderator_comment,
+            "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
     return jsonify({"complaints": result}), 200
 
+# Paslēpt sūdzību no profila.
 @bp.route('/dismiss-complaint/<int:complaint_id>', methods=['PUT'])
+@jwt_required()
 def dismiss_complaint(complaint_id):
-    user_email = request.headers.get("User-Email")
-    user = User.query.filter_by(email=user_email).first()
+    """
+    Lietotājs var paslēpt kādu no savām sūdzībām no profila, ja tā jau ir apstrādāta.
+    Tiek atzīmēts lauks `is_dismissed_by_user = True`.
+    """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Lietotājs nav atrasts"}), 404
 
