@@ -3,70 +3,103 @@ import "../styles/ModeratorPanel.css";
 import { useNavigate } from "react-router-dom";
 
 const ModeratorPanel = () => {
-    const [complaints, setComplaints] = useState([]);
-    const [error, setError] = useState("");
-    const navigate = useNavigate();
-    const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
+  // Saglabājam ielādētās sūdzības stāvokli
+  const [complaints, setComplaints] = useState([]);
+  // Kļūdu ziņojumu stāvoklis
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchComplaints = async () => {
-            const response = await fetch("http://127.0.0.1:5000/view-complaints", {
-                headers: {
-                    "User-Email": localStorage.getItem("email") || "",
-                },
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                setError(data.error || "Neizdevās ielādēt sūdzības");
-            } else {
-                setComplaints(data.complaints || []);
-            }
-        };
+  // Lietotāja loma, lai kontrolētu pieeju vai UI daļas
+  const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
 
-        fetchComplaints();
-    }, []);
+  useEffect(() => {
+    // Funkcija, kas veic pieprasījumu sūdzību saņemšanai
+    const fetchComplaints = async () => {
+      try {
+        const token = localStorage.getItem("token") || "";
 
-    const handleComplaintAction = async (id, action) => {
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/resolve-complaint/${id}?action=${action}`, {
-                method: "PUT",
-            });
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
-
-            setComplaints((prev) => prev.filter((c) => c.id !== id));
-        } catch (err) {
-            alert("Kļūda, mainot sūdzības statusu: " + err.message);
-        }
-    };
-
-    const handleDeleteReview = async (reviewId, complaintId) => {
-    if (!reviewId) {
-        alert("Nav atsauksmes ID! Sūdzība nav par atsauksmi.");
-        return;
-    }
-
-    const confirm = window.confirm("Vai tiešām vēlaties dzēst šo atsauksmi?");
-    if (!confirm) return;
-
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
-            method: "DELETE",
-            headers: {
-                "User-Email": localStorage.getItem("email"),
-            },
+        const response = await fetch("http://127.0.0.1:5000/view-complaints", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
 
-        alert("Atsauksme veiksmīgi dzēsta!");
-        await handleComplaintAction(complaintId, "resolved");
+        // Ja servera atbilde nav veiksmīga, iestata kļūdu
+        if (!response.ok) {
+          setError(data.error || "Neizdevās ielādēt sūdzības");
+        } else {
+          // Ja dati ir, iestata tos state mainīgajā
+          setComplaints(data.complaints || []);
+        }
+      } catch (err) {
+        // Ja notiek tīkls vai cita kļūda
+        setError("Radās kļūda, ielādējot sūdzības");
+      }
+    };
+
+    // Izsaucam funkciju pēc komponenta ielādes
+    fetchComplaints();
+  }, []);
+
+  // Funkcija, lai mainītu sūdzības statusu (piemēram, "atrisināta", "ignorēta")
+  const handleComplaintAction = async (id, action) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+
+      const response = await fetch(
+        `http://127.0.0.1:5000/resolve-complaint/${id}?action=${action}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+
+      // Noņemam risināto sūdzību no saraksta, lai UI atjaunotos
+      setComplaints((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-        alert("Kļūda dzēšot atsauksmi: " + err.message);
+      alert("Kļūda, mainot sūdzības statusu: " + err.message);
     }
-};
+  };
+
+  // Funkcija, lai dzēstu atsauksmi, ja sūdzība ir par atsauksmi
+  const handleDeleteReview = async (reviewId, complaintId) => {
+    if (!reviewId) {
+      alert("Nav atsauksmes ID! Sūdzība nav par atsauksmi.");
+      return;
+    }
+
+    const confirmDelete = window.confirm("Vai tiešām vēlaties dzēst šo atsauksmi?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token") || "";
+
+      const response = await fetch(`http://127.0.0.1:5000/delete-review/${reviewId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Nezināma kļūda");
+
+      alert("Atsauksme veiksmīgi dzēsta!");
+      // Pēc dzēšanas atzīmējam sūdzību kā atrisinātu
+      await handleComplaintAction(complaintId, "resolved");
+    } catch (err) {
+      alert("Kļūda dzēšot atsauksmi: " + err.message);
+    }
+  };
 
     return (
         <div className="moderator-panel">
