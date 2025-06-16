@@ -125,7 +125,7 @@ def add_movie():
         directors = json.dumps(data.get("directors", []))
         writers = json.dumps(data.get("writers", []))
 
-        # Obbligātie lauki
+        # Obligātie lauki
         if not title or not release_date or not genres:
             return jsonify({"error": "Nepieciešams nosaukums, izlaišanas datums un žanrs."}), 400
 
@@ -946,7 +946,7 @@ def clean_duplicate_reviews():
             db.session.delete(review)
 
         db.session.commit()
-        return jsonify({"message": f"Удалено {len(duplicates)} дублирующихся отзывов"}), 200
+        return jsonify({"message": f"Noņemtas {len(duplicates)} atkārtotas atsauksmes"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
