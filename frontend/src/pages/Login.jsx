@@ -2,56 +2,75 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 
+// Lietotāja autorizācija
 const Login = () => {
+    // Stāvokļa mainīgie lietotāja ievadei
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
+    // Kļūdu un paziņojumu stāvoklis
     const [errors, setErrors] = useState({});
     const [error, setError] = useState("");
     const [loginSuccess, setLoginSuccess] = useState(false);
+
     const navigate = useNavigate();
 
+    // Funkcija, kas izpildās formas iesniegšanas brīdī
     const handleLogin = async (e) => {
         e.preventDefault();
+
+        // Validācijas kļūdu objekts
         const newErrors = {};
 
+        // Pamata validācija — pārbauda, vai lauki nav tukši
         if (!email.trim()) newErrors.email = "Lūdzu, ievadiet e-pastu!";
         if (!password.trim()) newErrors.password = "Lūdzu, ievadiet paroli!";
 
+        // Ja ir kādas kļūdas — uzstāda tās stāvoklī un pārtrauc funkciju
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
         }
 
+        // Notīra iepriekšējās kļūdas pirms pieprasījuma
         setErrors({});
         setError("");
 
         try {
+            // Sūta POST pieprasījumu uz backend autentifikācijai
             const response = await fetch("http://127.0.0.1:5000/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                credentials: "include",
                 body: JSON.stringify({ email, password })
             });
 
             const data = await response.json();
 
+            // Ja atbilde nav veiksmīga — uzstāda kļūdas paziņojumu
             if (!response.ok) {
                 setError(data.error || "Nezināma kļūda");
                 return;
             }
 
+            // Ja veiksmīgi — saglabā JWT tokenu un lietotāja datus localStorage
             localStorage.setItem("token", data.access_token);
             localStorage.setItem("username", data.user.username);
             localStorage.setItem("email", data.user.email);
             localStorage.setItem("role", data.user.role);
 
-            setLoginSuccess(true); // показываем сообщение
+            // Parāda veiksmīgas pieslēgšanās ziņu
+            setLoginSuccess(true);
+
+            // Pēc dažām sekundēm novirza uz galveno lapu vai kur vajag
+            setTimeout(() => navigate("/catalog"), 2000);
+
         } catch (err) {
+            // Tīkla vai citu kļūdu apstrāde
             setError("Neizdevās pieslēgties. Pārbaudiet interneta savienojumu.");
         }
-    };
+};
 
     return (
         <div className="login-container">
