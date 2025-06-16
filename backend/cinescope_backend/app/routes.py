@@ -554,29 +554,46 @@ def get_movies_by_actor(actor_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Maršruts, kas ļauj administratoram noņemt aktieri no konkrētas filmas
 @bp.route('/remove-actor-from-movie', methods=['DELETE'])
+@jwt_required() 
 def remove_actor_from_movie():
     try:
+        # Iegūstam pašreizējo lietotāja identifikatoru no JWT
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or user.role != 'admin':
+            return jsonify({"error": "Pieeja liegta: tikai administratoriem"}), 403
+
         data = request.get_json()
         movie_id = data.get('movie_id')
         actor_id = data.get('actor_id')
 
+        # Pārbaudām, vai ir sniegti nepieciešamie parametri
         if not movie_id or not actor_id:
-            return jsonify({"error": "Нужно передать 'movie_id' и 'actor_id'"}), 400
+            return jsonify({"error": "Nepieciešams 'movie_id' un 'actor_id'"}), 400
 
+        # Iegūstam filmu un aktieri no datubāzes
         movie = Movie.query.get(movie_id)
         actor = Actor.query.get(actor_id)
 
         if not movie or not actor:
-            return jsonify({"error": "Фильм или актёр не найдены"}), 404
+            return jsonify({"error": "Filma vai aktieris nav atrasts"}), 404
 
+        # Ja aktieris ir piesaistīts filmai — noņemam saiti
         if actor in movie.actors:
             movie.actors.remove(actor)
-            db.session.commit()
-            return jsonify({"message": f"Актёр {actor.name} удалён из фильма {movie.title}"}), 200
+            db.session.commit()  # Saglabājam izmaiņas datubāzē
+
+            return jsonify({
+                "message": f"Aktieris '{actor.name}' ir veiksmīgi noņemts no filmas '{movie.title}'"
+            }), 200
         else:
-            return jsonify({"error": "Актёр не был привязан к этому фильму"}), 400
+            #  Aktieris nav bijis piesaistīts šai filmai
+            return jsonify({"error": "Aktieris nav piesaistīts norādītajai filmai"}), 400
+
     except Exception as e:
+        # Neparedzēta kļūda
         return jsonify({"error": str(e)}), 500
 
 # Pievienot režisoru
@@ -1155,27 +1172,34 @@ def resolve_complaint(complaint_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Maršruts, kas atgriež visus atsauksmes, ko ir uzrakstījis autentificēts lietotājs
 @bp.route('/get-user-reviews', methods=['GET'])
+@jwt_required()  # Tikai autorizēti lietotāji drīkst piekļūt šai funkcijai
 def get_user_reviews():
-    user_email = request.headers.get("User-Email")
-    if not user_email:
-        return jsonify({"error": "Nav norādīts lietotāja e-pasts!"}), 400
+    try:
+        user_id = get_jwt_identity()
 
-    user = User.query.filter_by(email=user_email).first()
-    if not user:
-        return jsonify({"error": "Lietotājs nav atrasts!"}), 404
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "Lietotājs nav atrasts!"}), 404
 
-    reviews = Review.query.filter_by(user_id=user.id).all()
-    review_list = [{
-        "id": r.id,
-        "movie_id": r.movie_id,
-        "movie_title": Movie.query.get(r.movie_id).title if Movie.query.get(r.movie_id) else "Nezināma filma",
-        "text": r.text,
-        "rating": r.rating,
-        "created_at": r.created_at.strftime('%Y-%m-%d %H:%M')
-    } for r in reviews]
+        # Iegūstam visas atsauksmes, ko uzrakstījis šis lietotājs
+        reviews = Review.query.filter_by(user_id=user.id).all()
 
-    return jsonify({"reviews": review_list}), 200
+        review_list = [{
+            "id": r.id,
+            "movie_id": r.movie_id,
+            "movie_title": Movie.query.get(r.movie_id).title if Movie.query.get(r.movie_id) else "Nezināma filma",
+            "text": r.text,
+            "rating": r.rating,
+            "created_at": r.created_at.strftime('%Y-%m-%d %H:%M') 
+        } for r in reviews]
+
+        return jsonify({"reviews": review_list}), 200
+
+    except Exception as e:
+        # Ja notiek neparedzēta kļūda
+        return jsonify({"error": str(e)}), 500
 
 #Lietotāja profila datu atjaunināšana
 @bp.route('/update-profile', methods=['PUT'])
