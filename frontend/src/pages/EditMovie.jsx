@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../styles/EditMovie.css";
 
-# Filmu rediģēšanas iespējas
+// Filmu rediģēšanas iespējas
 const EditMovie = () => {
     const { id } = useParams(); // Filmas ID tiek iegūts no URL
     const navigate = useNavigate();
