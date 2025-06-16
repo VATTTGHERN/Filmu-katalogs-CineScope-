@@ -6,7 +6,7 @@ import LatvianMovies from "./pages/LatvianMovies";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AddMovie from "./pages/AddMovie";
-import EditMovie from "./pages/EditMovie"; // ✅ Добавляем импорт страницы редактирования
+import EditMovie from "./pages/EditMovie";
 import "./styles/global.css"; 
 import Profile from "./pages/Profile";
 import ManageUsers from "./pages/ManageUsers";
@@ -23,10 +23,10 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/add-movie" element={<AddMovie />} />
-                <Route path="/edit-movie/:id" element={<EditMovie />} /> {/* ✅ Добавлен маршрут редактирования */}
+                <Route path="/edit-movie/:id" element={<EditMovie />} /> 
                 <Route path="/profile" element={<Profile />} />
-                <Route path="*" element={<MovieCatalog />} /> {/* Перенаправление на каталог по умолчанию */}
-                <Route path="/manage-users" element={<ManageUsers />} /> {/* 🔥 Новый маршрут */}
+                <Route path="*" element={<MovieCatalog />} />
+                <Route path="/manage-users" element={<ManageUsers />} />
                 <Route path="/favorites" element={<FavoriteMovies />} />
                 <Route path="/moderator" element={<ModeratorPanel />} />
             </Routes>
